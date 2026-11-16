@@ -77,6 +77,7 @@ class DestinationTrailer {
         });
       video.classList.add("trailer-shot");
       video.classList.toggle("trailer-front", i === 0);
+      listen("loadedmetadata", () => CabinViewport.frame(video));
       listen("playing", () => {
         if (!this.enabled) {
           video.pause();
@@ -105,6 +106,7 @@ class DestinationTrailer {
         if (this.enabled && video === this.current) this.next();
       });
     });
+    this.videos.forEach((video) => CabinViewport.frame(video));
   }
   get current() {
     return this.videos[this.front];
@@ -116,6 +118,11 @@ class DestinationTrailer {
     document.dispatchEvent(new Event("trailerstatechange"));
   }
   assign(video, clip) {
+    // Optional focal point per shot. Defaults keep the center of the original
+    // composition visible through the main window, including its poster.
+    video.dataset.windowFocusX = String(clip.windowFocus?.x ?? 0.5);
+    video.dataset.windowFocusY = String(clip.windowFocus?.y ?? 0.5);
+    CabinViewport.frame(video);
     if (video.getAttribute("src") === clip.src) return;
     video.preload = "auto";
     video.src = clip.src;

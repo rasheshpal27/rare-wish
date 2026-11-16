@@ -29,6 +29,9 @@ Open `http://localhost:8080`. Alternatively, `npm start` runs the same server. D
 - `assets/js/content.js` — experience and destination data.
 - `assets/js/main.js` — coordinated scene controls, route handling, transitions, filtering and enquiry behavior.
 - `assets/js/trailers.js` — source registry and dual-buffer real-footage trailer player.
+- `assets/js/window-seat.js` — shared cabin geometry and main-window-centered video framing.
+- `assets/img/cabin-window-mask.png` — exact aperture mask derived from the cabin photograph, not an approximate oval.
+- `scripts/build-window-mask.py` — optional Pillow-based mask regeneration tool.
 - `assets/js/loader.js` — independent intro bootstrap, readiness and fail-open behavior.
 - `assets/img/`, `assets/fonts/` — extracted assets from the original supplied site; no base64 payloads in the document.
 - `VIDEO-SOURCES.md` — film credits, license, exact source pages and delivery/verification limitations.
@@ -43,6 +46,14 @@ The previous moving-photo loops are removed. The site now streams six real foota
 
 Posters are static loading/error/reduced-motion fallbacks, never passed off as live footage. A failed or blocked video does not lock the loader or navigation. Because footage is externally hosted, the privacy dialog discloses the browser connection to Pexels.
 
+## Window-seat framing
+
+The footage is centered on the primary physical window, not the viewport. A single, aspect-ratio-preserving landscape spans both windows; the second window reveals a different part of that same view, not a duplicated picture. The mask clips the media to the exact transparent openings in the original cabin artwork, using the same cover scaling and desktop/mobile alignment as the photograph. The mask and framing remain attached during the dive; the destination arrival stays full-bleed.
+
+Each shot can optionally define `windowFocus: { x: 0.5, y: 0.5 }` in `TRAILERS`, where coordinates are fractions of the source frame. The default is the source composition's center. Geometry is verified across screen sizes with test footage and static posters; subject-by-subject focal-point review of the real CDN clips still needs a reachable live preview.
+
+The mask can be rebuilt with `python scripts/build-window-mask.py` after installing Pillow. It is a checked-in asset; no image-processing dependency is needed to run the site.
+
 ## Verify
 
 Requires Node 22+, Python 3 and a running preview server:
@@ -55,7 +66,7 @@ npm test
 
 The tests use a Chromium binary delivered through npm on Linux. On other platforms, set `CHROME_EXECUTABLE_PATH` to an installed Chrome/Chromium binary. `TEST_BASE_URL` defaults to `http://127.0.0.1:8080` and can point to another preview.
 
-Coverage: default muted playback, two-shot sequencing, inactive-video pausing, coordinated destination transitions, rapid requests and cancellation, wheel-gesture coalescing, dive/cancel, deep links, search/enquiry flows, reduced motion, mobile swipe/menu, loader skip and watchdog, failed media recovery, blocked autoplay, viewport overflow, no-JavaScript fallback and console errors. CDN requests are intercepted by a test-only fixture; these checks do not verify live footage availability.
+Coverage: default muted playback, two-shot sequencing, inactive-video pausing, coordinated destination transitions, rapid requests and cancellation, wheel-gesture coalescing, dive/cancel, deep links, search/enquiry flows, reduced motion, mobile swipe/menu, loader skip and watchdog, failed media recovery, blocked autoplay, viewport overflow, no-JavaScript fallback and console errors. Window framing tests also check focal alignment, aspect ratio, mask/photo alignment, actual rendered pixels outside the apertures, resizing and the dive. CDN requests are intercepted by a test-only fixture; these checks do not verify live footage availability.
 
 ## Before public deployment
 

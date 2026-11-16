@@ -436,3 +436,203 @@ test(
     }
   },
 );
+
+test(
+  "window-seat composition and aperture clipping survive resizing and the dive",
+  { timeout: 60000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: "reduce",
+      });
+      await stubFootage(page);
+      await enter(page, base);
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+        [320, 667],
+        [900, 600],
+        [1920, 1080],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(80);
+        const frame = await page.evaluate(() => {
+          const stage = document.querySelector("#cabin-view");
+          const video = homeTrailers[0].current;
+          const window = cabinWindowGeometry();
+          const left = parseFloat(video.style.left),
+            top = parseFloat(video.style.top);
+          const width = parseFloat(video.style.width),
+            height = parseFloat(video.style.height);
+          return {
+            window,
+            left,
+            top,
+            width,
+            height,
+            centerX: left + width / 2,
+            centerY: top + height / 2,
+            mask: getComputedStyle(document.querySelector("#flight-portal"))
+              .maskImage,
+            photoPosition: getComputedStyle(
+              document.querySelector("#cabin-photograph"),
+            ).objectPosition,
+            maskPosition: getComputedStyle(
+              document.querySelector("#flight-portal"),
+            ).maskPosition,
+          };
+        });
+        assert.ok(
+          Math.abs(frame.centerX - frame.window.x) < 0.1,
+          "shot center belongs in the main window",
+        );
+        assert.ok(Math.abs(frame.centerY - frame.window.y) < 0.1);
+        assert.ok(
+          Math.abs(frame.width / frame.height - 16 / 9) < 0.001,
+          "no video stretch",
+        );
+        assert.ok(
+          frame.left <= frame.window.bounds.left &&
+            frame.left + frame.width >= frame.window.bounds.right,
+        );
+        assert.ok(
+          frame.top <= frame.window.bounds.top &&
+            frame.top + frame.height >= frame.window.bounds.bottom,
+        );
+        assert.match(frame.mask, /cabin-window-mask.png/);
+        assert.equal(frame.maskPosition, frame.photoPosition);
+      }
+      await page.evaluate(() =>
+        homeTrailers[0].assign(homeTrailers[0].current, {
+          ...TRAILERS.maldives.clips[0],
+          windowFocus: { x: 0.35, y: 0.45 },
+        }),
+      );
+      assert.equal(
+        await page.evaluate(() => {
+          const video = homeTrailers[0].current,
+            window = cabinWindowGeometry();
+          return (
+            Math.abs(
+              parseFloat(video.style.left) +
+                parseFloat(video.style.width) * 0.35 -
+                window.x,
+            ) < 0.1 &&
+            Math.abs(
+              parseFloat(video.style.top) +
+                parseFloat(video.style.height) * 0.45 -
+                window.y,
+            ) < 0.1
+          );
+        }),
+        true,
+        "shot-specific focus supported",
+      );
+
+      // Remove the cabin photo in this diagnostic only. The media layer must
+      // still NOT paint onto seats/walls: masking must work independently.
+      const diagnostic = await page.addStyleTag({
+        content: `
+      .cabin-view { background:#000!important; }
+      .cabin-photograph, .cabin-interior-shade, .header,
+      .cabin-stage > :not(.cabin-view) { visibility:hidden!important; }
+      .cabin-outside video { display:none!important; }
+      .cabin-outside .place-scene { background:rgb(255,0,0)!important; }
+    `,
+      });
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(100);
+        const png = await page.locator("#cabin-view").screenshot();
+        const samples = await page.evaluate(async (data) => {
+          const image = new Image();
+          image.src = "data:image/png;base64," + data;
+          await image.decode();
+          const canvas = document.createElement("canvas");
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(image, 0, 0);
+          const scale = Math.max(image.width / 1376, image.height / 768);
+          const ox =
+              (image.width - 1376 * scale) * (image.width <= 760 ? 0.68 : 0.5),
+            oy = (image.height - 768 * scale) * 0.5;
+          return [
+            [923, 430, true],
+            [1300, 430, true],
+            [800, 430, false],
+            [1020, 430, false],
+            [923, 270, false],
+            [923, 590, false],
+          ]
+            .map(([x, y, inside]) => [
+              Math.round(x * scale + ox),
+              Math.round(y * scale + oy),
+              inside,
+            ])
+            .filter(
+              ([x, y]) =>
+                x >= 0 && x < image.width && y >= 0 && y < image.height,
+            )
+            .map(([x, y, inside]) => ({
+              inside,
+              pixel: [...ctx.getImageData(x, y, 1, 1).data],
+            }));
+        }, png.toString("base64"));
+        assert.ok(samples.some((s) => s.inside));
+        for (const { inside, pixel } of samples) {
+          assert.equal(
+            pixel[0] > 240 && pixel[1] < 10,
+            inside,
+            "only the physical glass reveals the red test media",
+          );
+        }
+      }
+      await diagnostic.evaluate((el) => el.remove());
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.locator("#take-dive").click();
+      assert.equal(
+        await page
+          .locator("#dive-overlay .cabin-outside")
+          .evaluate((el) =>
+            getComputedStyle(el).maskImage.includes("cabin-window-mask.png"),
+          ),
+        true,
+      );
+      assert.equal(
+        await page
+          .locator("#dive-overlay video")
+          .evaluate((video) => parseFloat(video.style.width) > 0),
+        true,
+      );
+      await page.waitForURL("**/#destination/maldives");
+      await page.waitForFunction(() => arrivalTrailer?.current.readyState >= 2);
+      assert.equal(
+        await page
+          .locator("#arrival-trailer")
+          .evaluate((el) => getComputedStyle(el).maskImage),
+        "none",
+      );
+      assert.equal(
+        await page
+          .locator("#arrival-video")
+          .evaluate((video) => video.style.width),
+        "",
+        "arrival remains full-bleed, not window-cropped",
+      );
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  },
+);
