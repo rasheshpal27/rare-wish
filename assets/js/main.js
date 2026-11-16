@@ -678,21 +678,10 @@ selectScene(0, false);
 route();
 
 function cabinWindowGeometry() {
-  const stage = $("#cabin-view");
-  const width = stage.clientWidth,
-    height = stage.clientHeight;
-  const scale = Math.max(width / 1376, height / 768);
-  const offsetX = (width - 1376 * scale) * (width <= 760 ? 0.68 : 0.5);
-  const offsetY = (height - 768 * scale) * 0.5;
-  return {
-    x: 923 * scale + offsetX,
-    y: 430 * scale + offsetY,
-    width: 176 * scale,
-    height: 282 * scale,
-    bottom: 573 * scale + offsetY,
-  };
+  return CabinViewport.geometry($("#cabin-view"));
 }
 function positionWindowLabel() {
+  CabinViewport.layout($("#cabin-view"));
   const geometry = cabinWindowGeometry();
   const label = $("#window-glass-label"),
     width = $("#cabin-view").clientWidth;

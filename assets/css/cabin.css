@@ -780,3 +780,38 @@ html.loader-leaving .site-loader {
     animation: none;
   }
 }
+
+/* Seat-level framing: the media layer itself is clipped to the real apertures.
+   Photo and mask use exactly the same cover scaling and responsive alignment. */
+.cabin-view {
+  --cabin-position-x: 50%;
+}
+.cabin-photograph {
+  object-position: var(--cabin-position-x) 50%;
+}
+.cabin-outside {
+  background: transparent;
+  pointer-events: none;
+  -webkit-mask-image: url("../img/cabin-window-mask.png");
+  mask-image: url("../img/cabin-window-mask.png");
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-position: var(--cabin-position-x) 50%;
+  mask-position: var(--cabin-position-x) 50%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+}
+/* Geometry is measured in the cabin artwork's coordinates. These dimensions
+   are intentionally not 100vw/100vh: the main composition belongs in the glass. */
+.cabin-outside .trailer-shot {
+  right: auto;
+  bottom: auto;
+  max-width: none;
+  object-position: 50% 50%;
+}
+@media (max-width: 760px) {
+  .cabin-view {
+    --cabin-position-x: 68%;
+  }
+}
