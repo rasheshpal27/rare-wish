@@ -954,3 +954,171 @@ html.js-loading .site-loader {
     font-size: 38px;
   }
 }
+
+/* All 22 window experiences: a compact picker, not 22 cramped route labels. */
+.window-location {
+  max-width: 40%;
+}
+.location-display h2 {
+  font-size: clamp(25px, 2.7vw, 38px);
+  line-height: 1.08;
+}
+.location-meta {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  line-height: 1.6;
+}
+.window-glass-label {
+  white-space: normal;
+  width: 190px;
+  max-width: 48vw;
+}
+.window-glass-label > span:nth-child(2) {
+  line-height: 1.12;
+}
+.cabin-stops {
+  gap: 12px;
+}
+.cabin-stops > button {
+  justify-content: center;
+  flex: 0 0 36px;
+  min-height: 40px;
+  opacity: 1;
+  font-size: 20px;
+}
+.cabin-stops > button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.journey-picker {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+#journey-count {
+  display: block;
+  font-size: 7px;
+  letter-spacing: 1.5px;
+  color: #dbc398;
+  margin-bottom: 4px;
+}
+#journey-select {
+  width: 100%;
+  min-height: 32px;
+  background: transparent;
+  color: #f3ecd8;
+  border: 0;
+  border-bottom: 1px solid #f3ecd840;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  padding: 4px 0;
+}
+#journey-select option {
+  background: #26362a;
+  color: #f3ecd8;
+}
+.cabin-film-notes {
+  position: absolute;
+  z-index: 5;
+  top: 202px;
+  right: 6%;
+  color: #e4e2cd;
+  font-size: 7px;
+  letter-spacing: 0.4px;
+  min-height: 32px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+#arrival-film-note {
+  padding: 0;
+  margin: 20px 0;
+}
+@media (max-width: 760px) {
+  .cabin-flight-navigation {
+    bottom: 16px;
+  }
+  .cabin-route {
+    margin-bottom: 10px;
+  }
+  .cabin-stops {
+    gap: 6px;
+  }
+  #journey-count {
+    font-size: 6px;
+  }
+  #journey-select {
+    font-size: 10px;
+    min-height: 28px;
+  }
+  .cabin-stops > button {
+    flex-basis: 28px;
+    min-height: 38px;
+    font-size: 18px;
+  }
+  .window-glass-label {
+    width: 170px;
+  }
+  .window-glass-label > span:nth-child(2) {
+    font-size: 20px;
+  }
+  .cabin-film-notes {
+    top: 150px;
+    right: 7%;
+    font-size: 6px;
+  }
+  .cabin-dive-button {
+    max-width: 100%;
+  }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .cabin-flight-navigation {
+    bottom: 10px;
+  }
+  .cabin-action {
+    bottom: 84px;
+  }
+  .cabin-film-notes {
+    top: 140px;
+  }
+}
+/* Experience names can be longer than country names on the full-bleed arrival. */
+.arrival-copy h1 {
+  font-size: clamp(38px, 6vw, 84px);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .arrival-copy {
+    bottom: 9%;
+  }
+  .arrival-copy h1 {
+    font-size: clamp(36px, 9vw, 60px);
+  }
+}
+/* Keep audio reachable without covering the cabin picker or next arrow. */
+.cabin-in-view .music-control {
+  top: 170px;
+  bottom: auto;
+  right: calc(6% + 120px);
+  padding: 8px 0;
+  min-height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: #e4e2cd;
+  font-size: 9px;
+}
+@media (max-width: 760px) {
+  .cabin-in-view .music-control {
+    top: 120px;
+    right: calc(7% + 90px);
+    font-size: 7px;
+  }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .cabin-in-view .music-control {
+    top: 112px;
+  }
+}

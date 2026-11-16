@@ -1,6 +1,6 @@
 # Destination and experience film credits
 
-The homepage and destination pages use real camera footage in short, two-shot, silent trailer-style edits. Each shot plays for approximately 8 seconds, with a 700 ms dissolve into the next. The edit repeats automatically. These are curated stock-footage sequences, not official tourism-board trailers.
+The legacy destination pages use real camera footage in short, two-shot, silent trailer-style edits. The cabin homepage now follows all 22 experience previews below, starting with Antarctica; each uses the same film as its corresponding experience detail and arrival page. Each shot plays for approximately 8 seconds, with a 700 ms dissolve into the next. The edit repeats automatically. These are curated stock-footage sequences, not official tourism-board trailers.
 
 The former animated-photo MP4s have been removed from production. Still posters remain for loading, reduced motion, and network failure; they are never animated as replacement footage.
 
@@ -27,7 +27,7 @@ All six source pages link to the [Pexels License](https://www.pexels.com/license
 
 - Exact MP4 URLs copied from the source pages are registered in `assets/js/trailers.js` and `assets/js/experience-films.js`.
 - Clips stream directly from `videos.pexels.com`. There are no API keys, YouTube ads, embedded third-party players, or sound on autoplay.
-- Only the visible destination and its next shot are buffered. During destination transitions, the outgoing and incoming trailer may briefly play together.
+- Only the selected cabin experience and its next shot are buffered. During transitions, the outgoing and incoming trailers may briefly play together; the old stage’s media is unloaded after the transition. All 22 films are never downloaded together.
 - The source pages and license were accessible during implementation, **but this workspace cannot access the footage CDN**. Direct live playback and image quality could not be verified here. Check all three destination trailers and all 22 experience previews on the deployed preview before merging/releasing. External availability and autoplay policy can vary by browser/network.
 - Browser regression tests intercept the CDN requests with a clearly separated local playback fixture. They validate decoding, autoplay, shot sequencing, pausing, transitions, loading and errors—not the external footage's availability, quality, or geographic accuracy.
 - If the CDN fails, visitors see the static poster and an explicit retry control, not a fake moving-photo video. The initial loader always releases.
@@ -95,4 +95,4 @@ Two legacy Pixabay uploads link to Pexels' [Creative Commons page](https://www.p
 
 No footage is requested until welcome entry. Video is enabled by default except when the device requests reduced motion; the welcome checkbox lets visitors override either setting. Music is off unless explicitly approved. The ambient score is generated in the browser using original sine-tone arrangements, with no third-party song, download, or audio licence dependency. Hidden tabs suspend audio. Music and video preferences are independent and are not stored.
 
-The experience collection uses still thumbnails; opening a detail loads only its clip(s). Closing/replacing the detail unloads its sources. Videos are always muted; audible music is controlled separately. External media bytes are delivered by Pexels, not Netlify.
+The cabin shows all 22 experience previews, starting with Antarctica, with a film-notes control linking to the relevant detail disclosure. The experience collection uses still thumbnails; opening a detail loads only its clip(s). Closing/replacing the detail unloads its sources. Videos are always muted; audible music is controlled separately. External media bytes are delivered by Pexels, not Netlify.

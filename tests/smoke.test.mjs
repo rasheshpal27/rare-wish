@@ -95,7 +95,7 @@ test(
 
       assert.equal(
         await page.locator("#scene-name").textContent(),
-        "The Maldives",
+        "Explore Antarctica",
       );
       assert.equal(
         await page.locator("#takeoff-movie, .movie-plane").count(),
@@ -118,7 +118,10 @@ test(
           );
       });
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.waitForTimeout(230);
       await settled(page);
       await page.mouse.move(450, 450);
@@ -127,12 +130,15 @@ test(
       await settled(page);
       assert.equal(
         await page.locator("#scene-name").textContent(),
-        "Antarctica",
+        "Sleep underwater",
       );
       await page.mouse.wheel(0, -90);
       await page.waitForTimeout(230);
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
 
       // Window expansion is visible, Escape cancels, next activation arrives.
       await page.locator("#take-dive").click();
@@ -149,15 +155,21 @@ test(
       await page.keyboard.press("Escape");
       assert.equal(await page.locator("#dive-overlay").isVisible(), false);
       await page.locator("#take-dive").click();
-      await page.waitForURL("**/#destination/kenya");
+      await page.waitForURL("**/#experience/kenya");
       await page.locator("#arrival-title").waitFor();
-      assert.equal(await page.locator("#arrival-title").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.reload();
       await page.locator("#skip-intro").click();
       await page.waitForFunction(
         () => !document.documentElement.classList.contains("js-loading"),
       );
-      assert.equal(await page.locator("#arrival-title").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.locator(".arrival-copy a").click();
       assert.equal(await page.locator("#destination-page").isVisible(), true);
       await page.locator("#place-enquire").click();
@@ -167,7 +179,7 @@ test(
       );
       await page.locator("#enquiry-dialog .close-dialog").click();
       await enter(page, `${base}/#home`);
-      await page.locator('[data-stop="2"]').click();
+      await page.locator("#journey-select").selectOption("21");
       await settled(page);
       await page.locator("#hero").evaluate((hero) =>
         hero.dispatchEvent(
@@ -228,7 +240,7 @@ test(
       );
       await page.locator("#motion-toggle").click();
       await page.waitForFunction(() => !homeTrailers[0].current.paused);
-      await page.locator('[data-stop="1"]').click();
+      await page.locator("#journey-select").selectOption("1");
       await settled(page);
       assert.equal(
         await page.evaluate(() =>
@@ -255,9 +267,9 @@ test(
         true,
       );
       await page.locator("#take-dive").click();
-      await page.waitForURL("**/#destination/maldives");
+      await page.waitForURL("**/#experience/antarctica");
       await page.waitForFunction(
-        () => activeDestination?.slug === "maldives" && arrivalTrailer,
+        () => activeDestination?.slug === "antarctica" && arrivalTrailer,
       );
       assert.equal(await page.locator("#dive-overlay").isVisible(), false);
       assert.equal(
@@ -292,7 +304,10 @@ test(
         hero.dispatchEvent(end);
       });
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.locator("#menu-button").click();
       assert.equal(await page.locator("#mobile-menu").isVisible(), true);
       await page.locator("#mobile-menu a").first().click();
@@ -353,9 +368,12 @@ test(
         await broken.locator("#motion-toggle").textContent(),
         /Retry/,
       );
-      await broken.locator('[data-stop="1"]').click();
+      await broken.locator("#journey-select").selectOption("1");
       await settled(broken);
-      assert.equal(await broken.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await broken.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await stubFootage(broken);
       await broken.locator("#motion-toggle").click();
       await broken.waitForFunction(
@@ -422,14 +440,14 @@ test(
       );
 
       // A newer button request wins; navigating away cancels all pending changes.
-      await broken.locator('[data-stop="0"]').click();
-      await broken.locator('[data-stop="2"]').click();
+      await broken.locator("#journey-select").selectOption("0");
+      await broken.locator("#journey-select").selectOption("2");
       await broken.waitForFunction(() => !sceneBusy && scene === 2);
       assert.equal(
         await broken.locator("#scene-name").textContent(),
-        "Antarctica",
+        "Sleep underwater",
       );
-      await broken.locator('[data-stop="1"]').click();
+      await broken.locator("#journey-select").selectOption("1");
       await broken.evaluate(() => {
         location.hash = "experiences";
       });
@@ -521,7 +539,7 @@ test(
       }
       await page.evaluate(() =>
         homeTrailers[0].assign(homeTrailers[0].current, {
-          ...TRAILERS.maldives.clips[0],
+          ...TRAILERS.antarctica.clips[0],
           windowFocus: { x: 0.35, y: 0.45 },
         }),
       );
@@ -625,7 +643,7 @@ test(
           .evaluate((video) => parseFloat(video.style.width) > 0),
         true,
       );
-      await page.waitForURL("**/#destination/maldives");
+      await page.waitForURL("**/#experience/antarctica");
       await page.waitForFunction(() => arrivalTrailer?.current.readyState >= 2);
       assert.equal(
         await page
@@ -866,6 +884,211 @@ test(
       await stubFootage(broken);
       await broken.locator("#detail-motion-toggle").click();
       await broken.waitForFunction(() => experienceTrailer.state === "playing");
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "all 22 cabin films start in Antarctica, stay lazy, and dive into matching experiences",
+  { timeout: 120000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: "reduce",
+      });
+      const requests = [],
+        errors = [];
+      page.on("request", (request) => {
+        if (request.url().includes("videos.pexels.com"))
+          requests.push(request.url());
+      });
+      page.on("pageerror", (error) => errors.push(error.message));
+      await stubFootage(page);
+      await page.goto(base);
+      assert.equal(requests.length, 0);
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Explore Antarctica",
+      );
+      assert.equal(await page.locator("#journey-select option").count(), 22);
+      assert.equal(
+        await page.locator("#flight-portal [data-scene]").count(),
+        22,
+      );
+      await page.locator("#intro-video").check();
+      await page.locator("#skip-intro").click();
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(
+        requests.length,
+        2,
+        "only the opening Antarctic shots are requested",
+      );
+      assert.equal(await page.locator("#journey-prev").isDisabled(), true);
+      assert.deepEqual(
+        await page.evaluate(() => cabinExperiences.map((p) => p.slug).sort()),
+        await page.evaluate(() => experiences.map((p) => p.id).sort()),
+      );
+      const stops = await page.evaluate(() =>
+        cabinExperiences.map((p) => ({
+          id: p.slug,
+          title: p.name,
+          clips: p.film.clips.map((c) => c.src),
+        })),
+      );
+      for (const [index, stop] of stops.entries()) {
+        await page.locator("#journey-select").selectOption(String(index));
+        await page.waitForFunction(
+          (index) => homeTrailers[index].state === "playing",
+          index,
+        );
+        assert.equal(
+          await page.locator("#scene-name").textContent(),
+          stop.title,
+        );
+        assert.equal(
+          await page.locator("#scene-number").textContent(),
+          String(index + 1).padStart(2, "0"),
+        );
+        assert.deepEqual(
+          await page.evaluate(
+            (index) => homeTrailers[index].clips.map((c) => c.src),
+            index,
+          ),
+          stop.clips,
+        );
+        assert.equal(
+          await page.evaluate(
+            (index) =>
+              homeTrailers.every(
+                (p, i) =>
+                  i === index || p.videos.every((v) => !v.hasAttribute("src")),
+              ),
+            index,
+          ),
+          true,
+        );
+        assert.ok(
+          Math.abs(
+            (await page
+              .locator("#flight-track-fill")
+              .evaluate((e) => parseFloat(e.style.width))) -
+              (index / 21) * 100,
+          ) < 0.001,
+        );
+        await page.locator("#take-dive").click();
+        await page.waitForURL(`**/#experience/${stop.id}`);
+        await page.waitForFunction(
+          (id) =>
+            activeDestination?.slug === id &&
+            arrivalTrailer?.state === "playing",
+          stop.id,
+        );
+        assert.equal(
+          await page.locator("#arrival-title").textContent(),
+          stop.title,
+        );
+        assert.deepEqual(
+          await page.evaluate(() => arrivalTrailer.clips.map((c) => c.src)),
+          stop.clips,
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            homeTrailers.every((p) =>
+              p.videos.every((v) => !v.hasAttribute("src")),
+            ),
+          ),
+          true,
+        );
+        assert.equal(
+          await page.locator("#place-enquire").getAttribute("data-enquire"),
+          stop.title,
+        );
+        assert.match(
+          await page.locator("#arrival-film-note").textContent(),
+          /ILLUSTRATIVE FILM/,
+        );
+        await page.locator(".arrival-back").click();
+        await page.waitForURL("**/#home");
+        await page.waitForFunction(() => !activeDestination);
+        assert.equal(
+          await page.locator("#journey-select").inputValue(),
+          String(index),
+        );
+      }
+      assert.equal(await page.locator("#journey-next").isDisabled(), true);
+      await page.locator("#hero").evaluate((hero) =>
+        hero.dispatchEvent(
+          new WheelEvent("wheel", {
+            deltaY: 100,
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+      );
+      await page.waitForURL("**/#experiences");
+
+      // New deep links survive reload; old destination links still resolve.
+      await enter(page, `${base}/#experience/polo`);
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Learn polo like the kings",
+      );
+      await page.reload();
+      await page.locator("#skip-intro").click();
+      await page.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Learn polo like the kings",
+      );
+      await enter(page, `${base}/#destination/maldives`);
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "The Maldives",
+      );
+
+      // Long labels fit narrow layouts; film notes remain accessible from the cabin.
+      await page.setViewportSize({ width: 320, height: 667 });
+      await enter(page, `${base}/#home`);
+      await page.locator("#journey-select").selectOption("21");
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+      );
+      const picker = await page.locator(".cabin-stops").boundingBox();
+      const dive = await page.locator("#take-dive").boundingBox();
+      const music = await page.locator(".music-control").boundingBox();
+      assert.ok(
+        picker.y >= dive.y + dive.height && picker.y + picker.height <= 667,
+      );
+      assert.ok(
+        music.y + music.height < picker.y,
+        "music never covers the picker or next arrow",
+      );
+      await page.locator("#cabin-film-notes").click();
+      assert.equal(
+        await page.locator("#detail-title").textContent(),
+        "Journey to the centre of the earth",
+      );
+      await page.keyboard.press("Escape");
+      await page.locator("#take-dive").click();
+      await page.waitForURL("**/#experience/earth");
+      await page.locator("#arrival-title").waitFor({ state: "visible" });
+      const title = await page.locator("#arrival-title").boundingBox();
+      assert.ok(title.y >= 70 && title.x + title.width <= 320);
+      assert.deepEqual(errors, []);
     } finally {
       await browser.close();
     }

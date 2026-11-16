@@ -234,6 +234,29 @@ class DestinationTrailer {
     this.setState("loading");
     this.setEnabled(true);
   }
+  unload() {
+    this.enabled = false;
+    if (
+      !this.videos.some(
+        (video) => video.hasAttribute("src") || video.hasAttribute("poster"),
+      )
+    )
+      return;
+    this.generation++;
+    this.timers.forEach(clearTimeout);
+    this.timers.clear();
+    this.switching = false;
+    this.front = this.clip = 0;
+    this.videos.forEach((video, index) => {
+      video.pause();
+      video.removeAttribute("src");
+      video.removeAttribute("poster");
+      video.load();
+      video.classList.toggle("trailer-front", index === 0);
+    });
+    this.container.removeAttribute("data-shot");
+    this.setState("idle");
+  }
   destroy() {
     this.enabled = false;
     this.listeners.abort();

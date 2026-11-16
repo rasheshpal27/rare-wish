@@ -219,8 +219,13 @@ $("#privacy-button").addEventListener("click", () =>
 $("#year").textContent = new Date().getFullYear();
 $('[name="date"]').min = new Date().toISOString().slice(0, 7);
 function updateHeader() {
+  document.body.classList.toggle(
+    "cabin-in-view",
+    !$("#home").hidden && scrollY < 60,
+  );
   const e =
     !location.hash.startsWith("#destination/") &&
+    !location.hash.startsWith("#experience/") &&
     scrollY < 60 &&
     $("#mobile-menu").hidden;
   ($("#header").classList.toggle("overlay-header", e),
@@ -258,10 +263,24 @@ let wheelGesture = false,
   touchStart = null,
   activeDestination = null;
 let arrivalTrailer = null;
-const homeTrailers = $$("#flight-portal [data-scene]").map(
-  (container, index) =>
-    new DestinationTrailer(container, destinations[index].slug),
-);
+// Build lightweight stages only; inactive films do not hold network sources.
+$("#flight-portal").replaceChildren();
+$("#journey-select").replaceChildren();
+const homeTrailers = cabinExperiences.map((place, index) => {
+  const container = document.createElement("div");
+  container.className = `place-scene${index === 0 ? " active" : ""}`;
+  container.dataset.scene = String(index);
+  container.dataset.experienceId = place.slug;
+  const video = document.createElement("video");
+  video.setAttribute("aria-label", `${place.name} video preview`);
+  container.append(video);
+  $("#flight-portal").append(container);
+  const option = document.createElement("option");
+  option.value = String(index);
+  option.textContent = `${String(index + 1).padStart(2, "0")} · ${place.name}`;
+  $("#journey-select").append(option);
+  return new DestinationTrailer(container, place.slug, place.film);
+});
 let outgoingScene = null,
   preparingScene = null;
 let sceneBusy = false,
@@ -298,37 +317,44 @@ function syncMotion() {
   const allowed = visible && !$("dialog[open]");
   experienceTrailer?.setEnabled(visible && $("#experience-dialog").open);
   homeTrailers.forEach((trailer, index) => {
-    trailer.setEnabled(
-      allowed &&
-        !activeDestination &&
-        !diving &&
-        [scene, outgoingScene, preparingScene].includes(index),
-    );
+    const relevant =
+      !activeDestination &&
+      [scene, outgoingScene, preparingScene].includes(index);
+    if (!relevant) {
+      trailer.unload();
+      return;
+    }
+    trailer.videos.forEach((video) => {
+      if (!video.getAttribute("poster"))
+        video.poster = imagePath(cabinExperiences[index].images[0]);
+    });
+    trailer.setEnabled(allowed && !diving);
   });
   arrivalTrailer?.setEnabled(allowed && !!activeDestination);
   updatePlaybackControls();
 }
 document.addEventListener("trailerstatechange", updatePlaybackControls);
 function updateSceneText() {
-  const place = destinations[scene];
-  $("#scene-number").textContent = `0${scene + 1}`;
+  const place = cabinExperiences[scene];
+  $("#scene-number").textContent = String(scene + 1).padStart(2, "0");
   $("#scene-name").textContent = place.name;
   $("#scene-region").textContent = place.region;
-  $("#scene-coordinates").textContent = place.coordinates;
+  $("#scene-coordinates").textContent =
+    `${place.category.toUpperCase()} · ${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length}`;
   $("#window-glass-destination").textContent = place.shortName;
-  $("#window-glass-label small").textContent = place.coordinates;
-  $("#dive-place").textContent = `EXPLORE ${place.name.toUpperCase()}`;
+  $("#window-glass-label small").textContent =
+    `${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length} · ${place.category.toUpperCase()}`;
+  $("#dive-place").textContent = `EXPLORE ${place.shortName.toUpperCase()}`;
 }
 function setStop() {
-  $$("[data-stop]").forEach((el) => {
-    const selected = Number(el.dataset.stop) === scene;
-    el.classList.toggle("active", selected);
-    el.setAttribute("aria-pressed", String(selected));
-    if (selected) el.setAttribute("aria-current", "step");
-    else el.removeAttribute("aria-current");
-  });
-  $("#flight-track-fill").style.width = `${scene * 50}%`;
-  $("#flight-track-plane").style.left = `${scene * 50}%`;
+  $("#journey-select").value = String(scene);
+  $("#journey-count").textContent =
+    `${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length} EXPERIENCES`;
+  $("#journey-prev").disabled = scene === 0;
+  $("#journey-next").disabled = scene === cabinExperiences.length - 1;
+  const progress = (scene / (cabinExperiences.length - 1)) * 100;
+  $("#flight-track-fill").style.width = `${progress}%`;
+  $("#flight-track-plane").style.left = `${progress}%`;
 }
 function cancelSceneTransition() {
   sceneVersion++;
@@ -345,7 +371,7 @@ function cancelSceneTransition() {
   setStop();
 }
 async function selectScene(index, animate = true) {
-  index = (index + destinations.length) % destinations.length;
+  index = Math.max(0, Math.min(cabinExperiences.length - 1, index));
   if (sceneBusy) {
     queuedScene = index;
     return;
@@ -416,8 +442,13 @@ async function selectScene(index, animate = true) {
   queuedScene = null;
   if (next !== null && next !== scene) selectScene(next);
 }
-$$("[data-stop]").forEach((el) =>
-  el.addEventListener("click", () => selectScene(Number(el.dataset.stop))),
+$("#journey-select").addEventListener("change", (event) =>
+  selectScene(Number(event.target.value)),
+);
+$("#journey-prev").addEventListener("click", () => stepScene(-1));
+$("#journey-next").addEventListener("click", () => stepScene(1));
+$("#cabin-film-notes").addEventListener("click", () =>
+  openExperience(cabinExperiences[scene].slug),
 );
 $$("[data-motion-toggle]").forEach((button) =>
   button.addEventListener("click", () => {
@@ -460,13 +491,13 @@ function stepScene(direction) {
     queuedScene = Math.max(
       0,
       Math.min(
-        destinations.length - 1,
-        (preparingScene ?? queuedScene ?? scene) + direction,
+        cabinExperiences.length - 1,
+        (queuedScene ?? preparingScene ?? scene) + direction,
       ),
     );
     return;
   }
-  if (direction > 0 && scene === destinations.length - 1) {
+  if (direction > 0 && scene === cabinExperiences.length - 1) {
     location.hash = "experiences";
   } else if (direction < 0 && scene === 0) {
     // The first scene is the beginning, not an implicit wraparound.
@@ -477,6 +508,7 @@ $("#hero").addEventListener(
   (event) => {
     if (
       !canChangeScene() ||
+      event.target.closest(".cabin-stops") ||
       event.ctrlKey ||
       Math.abs(event.deltaY) < Math.abs(event.deltaX) ||
       !event.deltaY
@@ -500,7 +532,8 @@ $("#hero").addEventListener(
   "touchstart",
   (event) => {
     touchStart =
-      event.touches.length === 1
+      event.touches.length === 1 &&
+      !event.target.closest("button,a,select,label")
         ? { x: event.touches[0].clientX, y: event.touches[0].clientY }
         : null;
   },
@@ -559,14 +592,22 @@ function renderDestination(place) {
   $("#home").hidden = true;
   $("#destination-page").hidden = false;
   document.body.classList.add("destination-mode");
+  document.body.classList.remove("cabin-in-view");
   document.title = `${place.name} — A Rare Wish`;
   arrivalTrailer?.destroy();
   const video = $("#arrival-video");
   video.poster = imagePath(place.images[0]);
-  arrivalTrailer = new DestinationTrailer($("#arrival-trailer"), place.slug);
+  arrivalTrailer = new DestinationTrailer(
+    $("#arrival-trailer"),
+    place.slug,
+    place.film || TRAILERS[place.slug],
+  );
   $("#arrival-region").textContent = place.region;
   $("#arrival-title").textContent = place.name;
   $("#arrival-intro").textContent = place.intro;
+  $("#arrival-film-note").textContent = place.film
+    ? `ILLUSTRATIVE FILM · ${place.film.note}`
+    : "Illustrative destination footage. See Film credits for source and location details.";
   $("#place-heading").innerHTML = place.title;
   $("#place-description").textContent = place.description;
   $("#place-image").src = imagePath(place.images[1]);
@@ -591,6 +632,16 @@ function route() {
   cancelDive();
   cancelSceneTransition();
   const hash = location.hash.slice(1);
+  if (hash.startsWith("experience/")) {
+    const place = cabinExperiences.find((item) => item.slug === hash.slice(11));
+    if (place) {
+      scene = cabinExperiences.indexOf(place);
+      cancelSceneTransition();
+      renderDestination(place);
+      return;
+    }
+    history.replaceState(null, "", "#home");
+  }
   if (hash.startsWith("destination/")) {
     const place = destinations.find((item) => item.slug === hash.slice(12));
     if (place) {
@@ -641,9 +692,9 @@ function cancelDive() {
 }
 $("#take-dive").addEventListener("click", () => {
   if (diving || sceneBusy) return;
-  const place = destinations[scene];
+  const place = cabinExperiences[scene];
   if (motionPreference.matches) {
-    location.hash = `destination/${place.slug}`;
+    location.hash = `experience/${place.slug}`;
     return;
   }
   diving = true;
@@ -699,7 +750,7 @@ $("#take-dive").addEventListener("click", () => {
     { duration: 1750, fill: "forwards" },
   );
   diveTimer = setTimeout(() => {
-    location.hash = `destination/${place.slug}`;
+    location.hash = `experience/${place.slug}`;
   }, 1750);
 });
 document.addEventListener("keydown", (event) => {
