@@ -32,6 +32,8 @@
     />
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="stylesheet" href="assets/css/cabin.css" />
+    <script src="assets/js/loader.js"></script>
+    <script src="assets/js/trailers.js" defer></script>
     <script src="assets/js/content.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <script type="application/ld+json">
@@ -46,6 +48,18 @@
     </script>
   </head>
   <body>
+    <div
+      class="site-loader"
+      id="site-loader"
+      aria-label="Preparing your journey"
+    >
+      <span class="loader-star" aria-hidden="true">✳</span>
+      <div class="loader-brand">A Rare Wish</div>
+      <p class="loader-eyebrow">EXTRAORDINARY IS WORTH THE WAIT</p>
+      <div class="loader-track" aria-hidden="true"><span></span></div>
+      <p id="loader-status" role="status">Preparing your window seat…</p>
+      <button id="skip-intro">Enter the experience ↗</button>
+    </div>
     <a class="skip-link" href="#experiences">Skip to experiences</a>
     <noscript
       ><p class="noscript-note">
@@ -95,38 +109,29 @@
               <div class="place-scene active" data-scene="0">
                 <video
                   muted
-                  loop
                   playsinline
-                  preload="auto"
+                  preload="none"
                   poster="assets/img/hero.webp"
-                  aria-label="Maldives scenic motion loop"
-                >
-                  <source src="assets/video/maldives.mp4" type="video/mp4" />
-                </video>
+                  aria-label="Maldives destination trailer"
+                ></video>
               </div>
               <div class="place-scene" data-scene="1">
                 <video
                   muted
-                  loop
                   playsinline
                   preload="none"
                   poster="assets/img/wild.webp"
-                  aria-label="Kenya scenic motion loop"
-                >
-                  <source src="assets/video/kenya.mp4" type="video/mp4" />
-                </video>
+                  aria-label="Kenya destination trailer"
+                ></video>
               </div>
               <div class="place-scene" data-scene="2">
                 <video
                   muted
-                  loop
                   playsinline
                   preload="none"
                   poster="assets/img/antarctica.webp"
-                  aria-label="Antarctica scenic motion loop"
-                >
-                  <source src="assets/video/antarctica.mp4" type="video/mp4" />
-                </video>
+                  aria-label="Antarctica destination trailer"
+                ></video>
               </div>
             </div>
             <img
@@ -224,7 +229,7 @@
             data-motion-toggle
             aria-pressed="false"
           >
-            Pause motion Ⅱ
+            Pause video Ⅱ
           </button>
           <a class="cabin-skip" href="#experiences"
             >Explore all experiences ↗</a
@@ -559,10 +564,12 @@
     </main>
     <main id="destination-page" hidden tabindex="-1">
       <section class="place-arrival">
-        <video id="arrival-video" muted loop playsinline preload="none"></video>
+        <div class="arrival-trailer" id="arrival-trailer">
+          <video id="arrival-video" muted playsinline preload="none"></video>
+        </div>
         <div class="arrival-shade"></div>
         <button class="arrival-motion" data-motion-toggle aria-pressed="false">
-          Pause motion Ⅱ</button
+          Pause video Ⅱ</button
         ><a class="arrival-back" href="#home">← Choose another place</a>
         <div class="arrival-copy">
           <span class="eyebrow light" id="arrival-region"></span>
@@ -628,6 +635,8 @@
         <span
           >© <span id="year">2026</span> A Rare Wish. All rights reserved.</span
         ><span>THOUGHTFULLY CURATED. DEEPLY REMEMBERED.</span
+        ><a href="VIDEO-SOURCES.md" target="_blank" rel="noopener"
+          >Film credits ↗</a
         ><button id="privacy-button">Privacy</button>
       </div>
     </footer>
@@ -795,8 +804,10 @@
       </p>
       <p>
         WhatsApp and Instagram are external services governed by their own
-        privacy policies. No analytics or advertising cookies are used in this
-        preview.
+        privacy policies. No analytics or advertising cookies are used by this
+        site. Destination footage streams from Pexels: your browser connects to
+        their CDN to play it, sharing normal connection information such as your
+        IP address. See Film credits for the footage sources.
       </p>
     </dialog>
     <div class="dive-overlay" id="dive-overlay" hidden aria-hidden="true">

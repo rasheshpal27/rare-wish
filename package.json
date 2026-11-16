@@ -6,7 +6,7 @@
   "scripts": {
     "start": "python3 -m http.server 8080 --bind 0.0.0.0",
     "test": "node --test tests/smoke.test.mjs",
-    "check": "node --check assets/js/main.js && node --check assets/js/content.js"
+    "check": "node --check assets/js/main.js && node --check assets/js/content.js && node --check assets/js/trailers.js && node --check assets/js/loader.js"
   },
   "devDependencies": {
     "@sparticuz/chromium": "153.0.0",
