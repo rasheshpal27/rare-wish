@@ -235,11 +235,6 @@ let scene = 0,
 let wheelGesture = false,
   touchStart = null,
   activeDestination = null;
-const teasers = [
-  "A thousand shades of blue. A slower rhythm.",
-  "Wild encounters. Endless horizons. A deeper connection.",
-  "Sculpted ice. Immense silence. Beyond the familiar.",
-];
 function syncMotion() {
   $$("video").forEach((video) => {
     const visible = activeDestination
@@ -264,15 +259,19 @@ function selectScene(index) {
     const selected = Number(el.dataset.stop) === scene;
     el.classList.toggle("active", selected);
     el.setAttribute("aria-pressed", String(selected));
+    if (selected) el.setAttribute("aria-current", "step");
+    else el.removeAttribute("aria-current");
   });
-  $("#scene-number").textContent = `0${scene + 1} / 03`;
+  $("#scene-number").textContent = `0${scene + 1}`;
   $("#scene-name").textContent = place.name;
   $("#scene-region").textContent = place.region;
   $("#scene-coordinates").textContent = place.coordinates;
-  $("#scene-teaser").textContent = teasers[scene];
+  $("#window-glass-destination").textContent = place.shortName;
+  $("#window-glass-label small").textContent = place.coordinates;
+  $("#flight-track-fill").style.width = `${scene * 50}%`;
+  $("#flight-track-plane").style.left = `${scene * 50}%`;
   $("#dive-place").textContent = `EXPLORE ${place.name.toUpperCase()}`;
-  $(".hero-atmosphere").style.backgroundImage =
-    `url('${imagePath(place.images[0])}')`;
+
   syncMotion();
 }
 $$("[data-stop]").forEach((el) =>
@@ -478,51 +477,38 @@ $("#take-dive").addEventListener("click", () => {
   }
   diving = true;
   $("#take-dive").disabled = true;
-  const rect = $("#explore-window").getBoundingClientRect();
+  const stage = $("#cabin-view").getBoundingClientRect();
+  const window = cabinWindowGeometry();
   const overlay = $("#dive-overlay"),
     frame = $(".dive-frame");
-  const video = $(".place-scene.active video").cloneNode(true);
+  const cabin = $("#cabin-view").cloneNode(true);
+  cabin.removeAttribute("id");
+  $$("[id]", cabin).forEach((element) => element.removeAttribute("id"));
+  $$(".place-scene:not(.active)", cabin).forEach((element) => element.remove());
+  const video = $("video", cabin);
   video.currentTime = $(".place-scene.active video").currentTime;
   video.muted = true;
-  frame.replaceChildren(video);
+  frame.replaceChildren(cabin);
   Object.assign(frame.style, {
-    left: `${rect.left}px`,
-    top: `${rect.top}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
+    left: `${stage.left}px`,
+    top: `${stage.top}px`,
+    width: `${stage.width}px`,
+    height: `${stage.height}px`,
   });
   overlay.hidden = false;
   document.body.classList.add("diving");
   if (!paused) video.play().catch(() => {});
-  // The real window grows into a full-screen view, then the camera drops
-  // into the landscape in two eased steps, without an aircraft cutaway.
-  diveAnimation = frame.animate(
+  // Zoom the original cabin itself, aiming through its actual window opening.
+  // There is no cutaway to an aircraft model or a second plane view.
+  const zoom =
+    Math.max(innerWidth / window.width, innerHeight / window.height) * 1.2;
+  const transform = (scale) =>
+    `translate(${innerWidth / 2 - stage.left - window.x * scale}px, ${innerHeight / 2 - stage.top - window.y * scale}px) scale(${scale})`;
+  diveAnimation = cabin.animate(
     [
-      {
-        left: `${rect.left}px`,
-        top: `${rect.top}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-        borderRadius: "46% / 30%",
-        filter: "blur(0px)",
-      },
-      {
-        left: "0px",
-        top: "0px",
-        width: `${innerWidth}px`,
-        height: `${innerHeight}px`,
-        borderRadius: "8%",
-        filter: "blur(1px)",
-        offset: 0.58,
-      },
-      {
-        left: `${-innerWidth * 0.18}px`,
-        top: `${-innerHeight * 0.18}px`,
-        width: `${innerWidth * 1.36}px`,
-        height: `${innerHeight * 1.36}px`,
-        borderRadius: "0%",
-        filter: "blur(0px)",
-      },
+      { transform: "translate(0,0) scale(1)", filter: "blur(0px)" },
+      { transform: transform(zoom * 0.55), filter: "blur(1px)", offset: 0.65 },
+      { transform: transform(zoom), filter: "blur(0px)" },
     ],
     { duration: 1650, easing: "cubic-bezier(.65,0,.2,1)", fill: "forwards" },
   );
@@ -555,3 +541,28 @@ $$("dialog").forEach((dialog) => {
 });
 selectScene(0);
 route();
+
+function cabinWindowGeometry() {
+  const stage = $("#cabin-view");
+  const width = stage.clientWidth,
+    height = stage.clientHeight;
+  const scale = Math.max(width / 1376, height / 768);
+  const offsetX = (width - 1376 * scale) * (width <= 760 ? 0.68 : 0.5);
+  const offsetY = (height - 768 * scale) * 0.5;
+  return {
+    x: 923 * scale + offsetX,
+    y: 430 * scale + offsetY,
+    width: 176 * scale,
+    height: 282 * scale,
+    bottom: 573 * scale + offsetY,
+  };
+}
+function positionWindowLabel() {
+  const geometry = cabinWindowGeometry();
+  const label = $("#window-glass-label"),
+    width = $("#cabin-view").clientWidth;
+  label.style.left = `${Math.max(85, Math.min(width - 85, geometry.x))}px`;
+  label.style.top = `${geometry.bottom + (width <= 760 ? 16 : -9)}px`;
+}
+new ResizeObserver(positionWindowLabel).observe($("#hero"));
+positionWindowLabel();

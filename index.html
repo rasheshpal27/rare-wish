@@ -31,6 +31,7 @@
       crossorigin
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/cabin.css" />
     <script src="assets/js/content.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <script type="application/ld+json">
@@ -82,97 +83,152 @@
       ><button data-enquire>Make a wish ↗</button>
     </div>
     <main id="home">
-      <section class="explore-hero" id="hero" aria-labelledby="hero-title">
-        <div class="hero-atmosphere" aria-hidden="true"></div>
-        <div class="explore-copy">
-          <span class="eyebrow light">THE WORLD IS STILL FULL OF WONDER</span>
-          <h1 id="hero-title">Don’t just go.<br /><em>Feel somewhere.</em></h1>
-          <p>
-            Wild encounters. Ocean silence. Places that stay with you.<br />Find
-            your next extraordinary.
-          </p>
-          <div class="place-caption" aria-live="polite">
-            <span id="scene-number">01 / 03</span
-            ><span id="scene-region">THE INDIAN OCEAN</span>
-          </div>
-          <h2 id="scene-name">The Maldives</h2>
-          <p id="scene-teaser">A thousand shades of blue. A slower rhythm.</p>
-          <button class="dive-cta" id="take-dive">
-            <span class="dive-cta-copy"
-              ><span class="dive-cta-verb">Take a Dive</span
-              ><span class="dive-cta-place" id="dive-place"
-                >EXPLORE THE MALDIVES</span
-              ></span
-            ><span class="dive-cta-arrow" aria-hidden="true">↗</span>
-          </button>
-          <a class="explore-all" href="#experiences"
-            >Or explore all 22 experiences ↗</a
-          >
-        </div>
-        <div class="window-composition">
-          <span class="window-overline">A WINDOW TO YOUR NEXT CHAPTER</span>
-          <div class="explore-window" id="explore-window">
-            <div class="place-scene active" data-scene="0">
-              <video
-                muted
-                loop
-                playsinline
-                preload="auto"
-                poster="assets/img/hero.webp"
-                aria-label="Maldives scenic motion loop"
-              >
-                <source src="assets/video/maldives.mp4" type="video/mp4" />
-              </video>
+      <section
+        class="cabin-journey"
+        id="hero"
+        aria-labelledby="hero-title"
+        data-chapter="A view worth travelling for"
+      >
+        <div class="cabin-stage" id="flight-stage">
+          <div class="cabin-view" id="cabin-view">
+            <div class="cabin-outside" id="flight-portal">
+              <div class="place-scene active" data-scene="0">
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="auto"
+                  poster="assets/img/hero.webp"
+                  aria-label="Maldives scenic motion loop"
+                >
+                  <source src="assets/video/maldives.mp4" type="video/mp4" />
+                </video>
+              </div>
+              <div class="place-scene" data-scene="1">
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="none"
+                  poster="assets/img/wild.webp"
+                  aria-label="Kenya scenic motion loop"
+                >
+                  <source src="assets/video/kenya.mp4" type="video/mp4" />
+                </video>
+              </div>
+              <div class="place-scene" data-scene="2">
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="none"
+                  poster="assets/img/antarctica.webp"
+                  aria-label="Antarctica scenic motion loop"
+                >
+                  <source src="assets/video/antarctica.mp4" type="video/mp4" />
+                </video>
+              </div>
             </div>
-            <div class="place-scene" data-scene="1">
-              <video
-                muted
-                loop
-                playsinline
-                preload="none"
-                poster="assets/img/wild.webp"
-                aria-label="Kenya scenic motion loop"
-              >
-                <source src="assets/video/kenya.mp4" type="video/mp4" />
-              </video>
+            <img
+              class="cabin-photograph"
+              id="cabin-photograph"
+              src="assets/img/cabin.webp"
+              fetchpriority="high"
+              alt="Inside a private aircraft, with ivory leather seating and two passenger windows"
+              width="1376"
+              height="768"
+            />
+            <div class="cabin-interior-shade"></div>
+          </div>
+          <div class="cabin-topline">
+            <span>YOUR WINDOW SEAT TO THE WORLD</span
+            ><span><i></i> CABIN 01A · A RARE WISH</span>
+          </div>
+          <div class="cabin-introduction" id="boarding-copy">
+            <span class="eyebrow light">THE JOURNEY BEGINS RIGHT HERE</span>
+            <h1 id="hero-title">A different<br />point of <em>view.</em></h1>
+            <p>
+              Let the world come to your window.<br />When somewhere moves you,
+              take a dive.
+            </p>
+          </div>
+          <div class="window-location" id="window-location">
+            <span class="window-location-kicker"
+              ><i></i> NOW OUTSIDE YOUR WINDOW</span
+            >
+            <div class="location-display">
+              <span id="scene-number">01</span>
+              <h2 id="scene-name">The Maldives</h2>
             </div>
-            <div class="place-scene" data-scene="2">
-              <video
-                muted
-                loop
-                playsinline
-                preload="none"
-                poster="assets/img/antarctica.webp"
-                aria-label="Antarctica scenic motion loop"
-              >
-                <source src="assets/video/antarctica.mp4" type="video/mp4" />
-              </video>
+            <div class="location-meta">
+              <span id="scene-region">THE INDIAN OCEAN</span
+              ><span id="scene-coordinates">04°17′ N · 73°25′ E</span>
             </div>
           </div>
-          <div class="window-under">
-            <span id="scene-coordinates">04°17′ N · 73°25′ E</span
-            ><button id="motion-toggle" data-motion-toggle aria-pressed="false">
-              Pause motion Ⅱ
-            </button>
-          </div>
-        </div>
-        <div class="explore-navigation">
-          <span class="scroll-instruction"
-            >SCROLL ONCE. DISCOVER SOMEWHERE NEW. ↓</span
-          >
           <div
-            class="place-stops"
-            role="group"
-            aria-label="Choose a destination"
+            class="window-glass-label"
+            id="window-glass-label"
+            aria-live="polite"
           >
-            <button class="active" data-stop="0" aria-pressed="true">
-              01 <span>Maldives</span></button
-            ><button data-stop="1" aria-pressed="false">
-              02 <span>Kenya</span></button
-            ><button data-stop="2" aria-pressed="false">
-              03 <span>Antarctica</span>
-            </button>
+            <span>YOUR NEXT CHAPTER</span
+            ><span id="window-glass-destination">Maldives</span
+            ><small>Somewhere beyond ordinary.</small>
           </div>
+          <div class="cabin-action">
+            <button class="cabin-dive-button" id="take-dive">
+              <span class="dive-symbol">↗</span
+              ><span
+                >Take a Dive
+                <small id="dive-place">TO THE MALDIVES</small></span
+              ><span class="dive-arrow">→</span></button
+            ><span class="dive-description"
+              >Through your window. Into somewhere extraordinary.</span
+            >
+          </div>
+          <div class="cabin-flight-navigation">
+            <div class="cabin-route">
+              <span id="flight-track-fill"></span
+              ><svg
+                id="flight-track-plane"
+                viewBox="0 0 32 32"
+                aria-hidden="true"
+              >
+                <path
+                  d="m30 16-10-3-7-11h-3l4 11-9-1-3-4H0l2 8-2 8h2l3-4 9-1-4 11h3l7-11Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+            <div class="cabin-stops">
+              <button
+                class="active"
+                data-stop="0"
+                aria-current="step"
+                aria-pressed="true"
+              >
+                <span>01</span> Maldives</button
+              ><button data-stop="1" aria-pressed="false">
+                <span>02</span> Kenya</button
+              ><button data-stop="2" aria-pressed="false">
+                <span>03</span> Antarctica
+              </button>
+            </div>
+            <div class="cabin-scroll-hint">
+              <span class="scroll-mouse"></span> SCROLL TO CHANGE THE VIEW
+              <span>↓</span>
+            </div>
+          </div>
+          <button
+            class="cabin-motion-control"
+            id="motion-toggle"
+            data-motion-toggle
+            aria-pressed="false"
+          >
+            Pause motion Ⅱ
+          </button>
+          <a class="cabin-skip" href="#experiences"
+            >Explore all experiences ↗</a
+          >
         </div>
       </section>
       <div

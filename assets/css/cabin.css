@@ -1,0 +1,638 @@
+/* Original cabin-window homepage, restored from the supplied design. */
+.cabin-stage {
+  height: 100svh;
+  min-height: 580px;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: #31382f;
+}
+.cabin-view,
+.cabin-outside,
+.cabin-photograph,
+.cabin-interior-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cabin-outside {
+  overflow: hidden;
+  background: #326e75;
+}
+.cabin-photograph {
+  z-index: 2;
+  object-fit: cover;
+  object-position: 50% 50%;
+  pointer-events: none;
+  filter: saturate(0.75);
+}
+.cabin-interior-shade {
+  z-index: 3;
+  background:
+    linear-gradient(90deg, #10180f28, transparent 53%),
+    linear-gradient(0deg, #111d1799, transparent 20%),
+    linear-gradient(180deg, #07120d44, transparent 20%);
+  pointer-events: none;
+}
+.cabin-topline {
+  position: absolute;
+  top: 143px;
+  left: 6%;
+  right: 6%;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  color: #e4e2cd99;
+  font-size: 7px;
+  letter-spacing: 1.9px;
+}
+.cabin-topline > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 6px;
+  letter-spacing: 1.5px;
+}
+.cabin-topline i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ced7a4;
+  box-shadow: 0 0 0 3px #c4cda719;
+}
+.cabin-introduction {
+  position: absolute;
+  left: 8%;
+  top: 26.5%;
+  z-index: 4;
+  width: 48%;
+  pointer-events: none;
+}
+.cabin-introduction > .eyebrow {
+  font-size: 8px;
+  letter-spacing: 2.4px;
+  color: #ddd1b3;
+}
+.cabin-introduction h1 {
+  font-size: clamp(67px, 6.5vw, 104px);
+  line-height: 0.99;
+  letter-spacing: -2.3px;
+  margin: 23px 0 24px;
+  font-weight: 400;
+}
+.cabin-introduction h1 em {
+  color: #e6cca0;
+}
+.cabin-introduction p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #e9e7dbad;
+  font-weight: 300;
+}
+.window-location {
+  position: absolute;
+  left: 8%;
+  top: 62.5%;
+  z-index: 4;
+  min-width: 290px;
+  transition:
+    opacity 0.16s,
+    transform 0.16s;
+}
+.window-location-kicker {
+  font-size: 6px;
+  letter-spacing: 1.8px;
+  color: #cfc8ab;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.window-location-kicker > i {
+  width: 4px;
+  height: 4px;
+  background: #c0ceaa;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #c0ceaa12;
+}
+.location-display {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 13px 0 11px;
+}
+.location-display > span {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #d4c39e;
+}
+.location-display h2 {
+  font-size: 38px;
+  line-height: 1;
+  color: #f2efdf;
+  font-weight: 400;
+}
+.location-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 6px;
+  letter-spacing: 1.4px;
+  color: #d6d9c79c;
+  padding-top: 12px;
+  border-top: 1px solid #c8d0ba24;
+}
+.location-meta > span:last-child {
+  letter-spacing: 1px;
+}
+.window-glass-label {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  text-align: center;
+  white-space: nowrap;
+  color: #fffced;
+  text-shadow: 0 1px 10px #163536ad;
+  padding: 8px 17px;
+  background: linear-gradient(0deg, #23443c57, transparent);
+  border-radius: 2px;
+}
+.window-glass-label > span:first-child {
+  display: block;
+  font-size: 5px;
+  letter-spacing: 1.4px;
+  opacity: 0.75;
+  margin-bottom: 5px;
+}
+.window-glass-label > span:nth-child(2) {
+  font-family: var(--serif);
+  font-size: 23px;
+  display: block;
+  line-height: 1;
+}
+.window-glass-label small {
+  display: block;
+  font-size: 5px;
+  letter-spacing: 0.7px;
+  opacity: 0.7;
+  margin-top: 7px;
+}
+.cabin-action {
+  position: absolute;
+  left: 8%;
+  bottom: 64px;
+  z-index: 6;
+}
+.cabin-dive-button {
+  background: #f2eddf;
+  color: #26362a;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 20px;
+  min-width: 251px;
+  text-align: left;
+  transition:
+    background 0.3s,
+    transform 0.3s;
+}
+.cabin-dive-button:hover {
+  background: #fff9eb;
+  transform: translateY(-3px);
+}
+.dive-symbol {
+  font-size: 30px;
+  line-height: 1;
+  color: #9b8053;
+  margin-right: 5px;
+}
+.cabin-dive-button > span:nth-child(2) {
+  font-size: 13px;
+  line-height: 1.2;
+}
+.cabin-dive-button small {
+  display: block;
+  font-size: 5px;
+  letter-spacing: 1.4px;
+  color: #8c927e;
+  margin-top: 7px;
+}
+.dive-arrow {
+  margin-left: auto;
+  padding-left: 20px;
+  font-size: 20px;
+}
+.dive-description {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: #cccdbd8c;
+  display: block;
+  margin-top: 12px;
+}
+.cabin-flight-navigation {
+  position: absolute;
+  bottom: 68px;
+  left: 54%;
+  right: 6%;
+  z-index: 6;
+  color: #f3ecd8;
+}
+.cabin-route {
+  position: relative;
+  height: 1px;
+  background: #f3ecd82e;
+  margin-bottom: 19px;
+}
+.cabin-route > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 1px;
+  background: #dbc398;
+}
+.cabin-route > svg {
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  top: -12px;
+  left: 0;
+  color: #e4cfa5;
+  transform: translate(-50%);
+  filter: drop-shadow(0 1px 3px #25322988);
+}
+.cabin-stops {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cabin-stops > button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 9px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 5px 0;
+}
+.cabin-stops > button:hover,
+.cabin-stops > button.active {
+  opacity: 1;
+}
+.cabin-stops > button > span {
+  font-size: 6px;
+  opacity: 0.65;
+}
+.cabin-scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 5px;
+  letter-spacing: 1.7px;
+  color: #dfe5cf80;
+  margin-top: 22px;
+}
+.cabin-scroll-hint > span:last-child {
+  font-size: 11px;
+}
+.scroll-mouse {
+  width: 9px;
+  height: 14px;
+  border: 1px solid #dfe5cf66;
+  border-radius: 8px;
+  position: relative;
+}
+.scroll-mouse:after {
+  content: "";
+  width: 1px;
+  height: 3px;
+  background: #dfe5cf;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  animation: mouse-wheel 1.8s ease-in-out infinite;
+}
+.cabin-skip {
+  position: absolute;
+  right: 6%;
+  bottom: 23px;
+  font-size: 7px;
+  color: #f0edd38f;
+  z-index: 5;
+}
+.cabin-skip:hover {
+  color: #fff;
+}
+@media (max-height: 760px) and (min-width: 761px) {
+  .cabin-introduction {
+    top: 27%;
+  }
+  .cabin-introduction h1 {
+    font-size: 76px;
+    margin: 17px 0 20px;
+  }
+  .cabin-introduction p {
+    font-size: 11px;
+  }
+  .cabin-topline {
+    top: 123px;
+  }
+  .window-location {
+    top: 62%;
+  }
+  .location-display h2 {
+    font-size: 31px;
+  }
+  .location-meta {
+    padding-top: 9px;
+  }
+  .cabin-action {
+    bottom: 45px;
+  }
+  .dive-description {
+    display: none;
+  }
+  .cabin-dive-button {
+    padding: 14px 18px;
+  }
+  .cabin-flight-navigation {
+    bottom: 45px;
+  }
+  .cabin-skip {
+    bottom: 14px;
+  }
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+  .cabin-introduction {
+    left: 6%;
+    width: 52%;
+  }
+  .cabin-introduction h1 {
+    font-size: 7.7vw;
+  }
+  .window-location,
+  .cabin-action {
+    left: 6%;
+  }
+  .cabin-flight-navigation {
+    left: 56%;
+  }
+}
+@media (max-width: 760px) {
+  .cabin-stage {
+    min-height: 580px;
+  }
+  .cabin-photograph {
+    object-position: 68% 50%;
+  }
+  .cabin-interior-shade {
+    background:
+      linear-gradient(180deg, #15201566, transparent 38%),
+      linear-gradient(0deg, #17231bcb, transparent 28%);
+  }
+  .cabin-topline {
+    top: 108px;
+    left: 7%;
+    right: 7%;
+    font-size: 5px;
+    letter-spacing: 1px;
+  }
+  .cabin-topline > span:last-child {
+    font-size: 4px;
+    letter-spacing: 0.6px;
+    gap: 5px;
+  }
+  .cabin-topline i {
+    width: 3px;
+    height: 3px;
+  }
+  .cabin-introduction {
+    left: 7%;
+    right: 7%;
+    width: auto;
+    top: 16%;
+    text-align: left;
+  }
+  .cabin-introduction > .eyebrow {
+    font-size: 5px;
+    letter-spacing: 1.7px;
+  }
+  .cabin-introduction h1 {
+    font-size: 51px;
+    line-height: 0.97;
+    letter-spacing: -1.5px;
+    margin: 16px 0;
+  }
+  .cabin-introduction p {
+    font-size: 9px;
+    line-height: 1.8;
+    max-width: 245px;
+  }
+  .window-location {
+    display: none;
+  }
+  .window-glass-label {
+    transform: translate(-50%);
+    padding: 0;
+    background: none;
+    text-shadow: 0 1px 5px #182f2088;
+  }
+  .window-glass-label > span:first-child {
+    font-size: 4px;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+  .window-glass-label > span:nth-child(2) {
+    font-size: 23px;
+  }
+  .window-glass-label small {
+    font-size: 5px;
+    margin-top: 6px;
+  }
+  .cabin-action {
+    left: 7%;
+    bottom: 90px;
+    right: 7%;
+    display: flex;
+    justify-content: center;
+  }
+  .cabin-dive-button {
+    padding: 12px 17px;
+    min-width: 245px;
+    gap: 15px;
+  }
+  .cabin-dive-button > span:nth-child(2) {
+    font-size: 12px;
+  }
+  .cabin-dive-button small {
+    font-size: 5px;
+    margin-top: 5px;
+  }
+  .dive-symbol {
+    font-size: 25px;
+  }
+  .dive-description {
+    display: none;
+  }
+  .cabin-flight-navigation {
+    left: 7%;
+    right: 7%;
+    bottom: 22px;
+  }
+  .cabin-route {
+    margin-bottom: 14px;
+  }
+  .cabin-route > svg {
+    width: 20px;
+    height: 20px;
+    top: -10px;
+  }
+  .cabin-stops > button {
+    font-size: 8px;
+    gap: 7px;
+  }
+  .cabin-stops > button > span {
+    font-size: 5px;
+  }
+  .cabin-scroll-hint {
+    display: none;
+  }
+  .cabin-skip {
+    right: 7%;
+    bottom: 165px;
+    font-size: 6px;
+    display: none;
+  }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .cabin-topline {
+    top: 102px;
+  }
+  .cabin-introduction {
+    top: 18%;
+  }
+  .cabin-introduction h1 {
+    font-size: 44px;
+    margin: 14px 0;
+  }
+  .cabin-introduction p {
+    display: none;
+  }
+  .cabin-introduction > .eyebrow {
+    font-size: 5px;
+  }
+  .cabin-action {
+    bottom: 69px;
+  }
+  .cabin-dive-button {
+    padding: 10px 17px;
+  }
+  .cabin-flight-navigation {
+    bottom: 16px;
+  }
+  .window-glass-label > span:first-child {
+    display: none;
+  }
+  .window-glass-label small {
+    font-size: 4px;
+    margin-top: 5px;
+  }
+  .window-glass-label > span:nth-child(2) {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cabin-stage {
+    position: relative;
+    height: 100svh;
+  }
+  .cabin-flight-navigation {
+    display: block;
+  }
+}
+/* Keep the original composition, without the old two-stage scroll track. */
+.cabin-journey {
+  position: relative;
+  height: 100svh;
+  min-height: 580px;
+  overflow: hidden;
+  color: var(--cream);
+  background: #31382f;
+  isolation: isolate;
+}
+.cabin-journey .cabin-stage {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+}
+.cabin-outside .place-scene {
+  inset: 0;
+  border-radius: 0;
+}
+.cabin-outside video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.82);
+}
+.cabin-route > span {
+  transition: width 0.4s ease;
+}
+.cabin-route > svg {
+  transition: left 0.4s ease;
+}
+.cabin-motion-control {
+  position: absolute;
+  right: 6%;
+  top: 170px;
+  z-index: 5;
+  color: #e4e2cd;
+  font-size: 7px;
+  letter-spacing: 1px;
+  padding: 8px 0;
+}
+body.diving .cabin-introduction,
+body.diving .window-location,
+body.diving .cabin-action,
+body.diving .cabin-flight-navigation,
+body.diving .window-glass-label {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+/* The transition uses this same cabin photograph, not a separate plane scene. */
+.dive-frame {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.dive-frame > .cabin-view {
+  transform-origin: 0 0;
+}
+@media (max-width: 760px) {
+  .cabin-motion-control {
+    top: 120px;
+    right: 7%;
+    font-size: 6px;
+  }
+  .cabin-skip {
+    display: block;
+    bottom: 161px;
+  }
+  .cabin-stops {
+    width: 100%;
+  }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .cabin-motion-control {
+    top: 112px;
+  }
+  .cabin-skip {
+    bottom: 139px;
+  }
+}
