@@ -225,8 +225,8 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Discrete destination changes: the first wheel event advances immediately;
-// the rest of that gesture (including trackpad inertia) is ignored until idle.
+// One gesture chooses one stop. The visual change is a shared 1.1-second
+// dissolve: old footage keeps playing until the incoming scene has settled.
 const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
 let scene = 0,
   paused = motionPreference.matches,
@@ -235,26 +235,60 @@ let scene = 0,
 let wheelGesture = false,
   touchStart = null,
   activeDestination = null;
-function syncMotion() {
-  $$("video").forEach((video) => {
-    const visible = activeDestination
-      ? video.id === "arrival-video"
-      : video.closest(".place-scene")?.classList.contains("active");
-    if (!paused && !document.hidden && visible && !$("dialog[open]"))
-      video.play().catch(() => {});
-    else video.pause();
-  });
+let arrivalTrailer = null;
+const homeTrailers = $$("#flight-portal [data-scene]").map(
+  (container, index) =>
+    new DestinationTrailer(container, destinations[index].slug),
+);
+let outgoingScene = null,
+  preparingScene = null;
+let sceneBusy = false,
+  sceneVersion = 0,
+  queuedScene = null;
+let sceneAnimations = [];
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function shownTrailer() {
+  return activeDestination ? arrivalTrailer : homeTrailers[scene];
+}
+function updatePlaybackControls() {
+  const player = shownTrailer();
+  const state = player?.state;
+  let text = paused ? "Play video ▷" : "Pause video Ⅱ";
+  if (!paused && state === "error") text = "Video unavailable · Retry ↻";
+  else if (!paused && state === "blocked") text = "Play video ▷";
+  else if (!paused && (state === "loading" || state === "idle"))
+    text = "Loading video · Pause Ⅱ";
   $$("[data-motion-toggle]").forEach((button) => {
-    button.textContent = paused ? "Play motion ▷" : "Pause motion Ⅱ";
+    button.textContent = text;
     button.setAttribute("aria-pressed", String(paused));
+    button.setAttribute("aria-label", text);
   });
 }
-function selectScene(index) {
-  scene = (index + destinations.length) % destinations.length;
+function syncMotion() {
+  const allowed = !paused && !document.hidden && !$("dialog[open]");
+  homeTrailers.forEach((trailer, index) => {
+    trailer.setEnabled(
+      allowed &&
+        !activeDestination &&
+        !diving &&
+        [scene, outgoingScene, preparingScene].includes(index),
+    );
+  });
+  arrivalTrailer?.setEnabled(allowed && !!activeDestination);
+  updatePlaybackControls();
+}
+document.addEventListener("trailerstatechange", updatePlaybackControls);
+function updateSceneText() {
   const place = destinations[scene];
-  $$("[data-scene]").forEach((el) =>
-    el.classList.toggle("active", Number(el.dataset.scene) === scene),
-  );
+  $("#scene-number").textContent = `0${scene + 1}`;
+  $("#scene-name").textContent = place.name;
+  $("#scene-region").textContent = place.region;
+  $("#scene-coordinates").textContent = place.coordinates;
+  $("#window-glass-destination").textContent = place.shortName;
+  $("#window-glass-label small").textContent = place.coordinates;
+  $("#dive-place").textContent = `EXPLORE ${place.name.toUpperCase()}`;
+}
+function setStop() {
   $$("[data-stop]").forEach((el) => {
     const selected = Number(el.dataset.stop) === scene;
     el.classList.toggle("active", selected);
@@ -262,35 +296,116 @@ function selectScene(index) {
     if (selected) el.setAttribute("aria-current", "step");
     else el.removeAttribute("aria-current");
   });
-  $("#scene-number").textContent = `0${scene + 1}`;
-  $("#scene-name").textContent = place.name;
-  $("#scene-region").textContent = place.region;
-  $("#scene-coordinates").textContent = place.coordinates;
-  $("#window-glass-destination").textContent = place.shortName;
-  $("#window-glass-label small").textContent = place.coordinates;
   $("#flight-track-fill").style.width = `${scene * 50}%`;
   $("#flight-track-plane").style.left = `${scene * 50}%`;
-  $("#dive-place").textContent = `EXPLORE ${place.name.toUpperCase()}`;
-
+}
+function cancelSceneTransition() {
+  sceneVersion++;
+  sceneBusy = false;
+  queuedScene = outgoingScene = preparingScene = null;
+  sceneAnimations.forEach((animation) => animation.cancel());
+  sceneAnimations = [];
+  document.body.classList.remove("scene-changing");
+  $("#take-dive").disabled = false;
+  $$("#flight-portal [data-scene]").forEach((el, i) =>
+    el.classList.toggle("active", i === scene),
+  );
+  updateSceneText();
+  setStop();
+}
+async function selectScene(index, animate = true) {
+  index = (index + destinations.length) % destinations.length;
+  if (sceneBusy) {
+    queuedScene = index;
+    return;
+  }
+  if (index === scene || !animate || motionPreference.matches) {
+    scene = index;
+    cancelSceneTransition();
+    syncMotion();
+    return;
+  }
+  sceneBusy = true;
+  const version = ++sceneVersion;
+  const oldScene = scene;
+  preparingScene = index;
+  $("#take-dive").disabled = true;
+  // Request a decoded incoming frame before crossfading. Bounded wait: a broken
+  // CDN must never lock navigation; the static poster and retry control remain.
+  if (!paused) {
+    syncMotion();
+    await Promise.race([homeTrailers[index].prepare(), delay(2200)]);
+  }
+  if (version !== sceneVersion) return;
+  scene = index;
+  outgoingScene = oldScene;
+  preparingScene = null;
+  document.body.classList.add("scene-changing");
+  setStop();
+  $$("#flight-portal [data-scene]").forEach((el, i) =>
+    el.classList.toggle("active", i === scene),
+  );
   syncMotion();
+  // Animate inner content, never the window label's positioning transform.
+  const textNodes = $$(
+    ".location-display, .location-meta, #window-glass-label > span:nth-child(2), #window-glass-label small, #dive-place",
+  );
+  sceneAnimations = textNodes.map((node) =>
+    node.animate(
+      [
+        { opacity: 1, transform: "translateY(0px)" },
+        { opacity: 0, transform: "translateY(-5px)" },
+      ],
+      { duration: 200, easing: "ease-in", fill: "forwards" },
+    ),
+  );
+  await delay(200);
+  if (version !== sceneVersion) return;
+  updateSceneText();
+  sceneAnimations.forEach((animation) => animation.cancel());
+  sceneAnimations = textNodes.map((node) =>
+    node.animate(
+      [
+        { opacity: 0, transform: "translateY(7px)" },
+        { opacity: 1, transform: "translateY(0px)" },
+      ],
+      { duration: 850, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
+    ),
+  );
+  await delay(900);
+  if (version !== sceneVersion) return;
+  sceneAnimations.forEach((animation) => animation.cancel());
+  sceneAnimations = [];
+  sceneBusy = false;
+  outgoingScene = null;
+  document.body.classList.remove("scene-changing");
+  $("#take-dive").disabled = false;
+  syncMotion();
+  const next = queuedScene;
+  queuedScene = null;
+  if (next !== null && next !== scene) selectScene(next);
 }
 $$("[data-stop]").forEach((el) =>
   el.addEventListener("click", () => selectScene(Number(el.dataset.stop))),
 );
 $$("[data-motion-toggle]").forEach((button) =>
   button.addEventListener("click", () => {
-    paused = !paused;
+    const player = shownTrailer();
+    if (!paused && ["error", "blocked"].includes(player?.state)) player.retry();
+    else paused = !paused;
     syncMotion();
   }),
 );
 motionPreference.addEventListener("change", (event) => {
   paused = event.matches;
+  cancelSceneTransition();
   syncMotion();
 });
 document.addEventListener("visibilitychange", syncMotion);
 function canChangeScene() {
   const rect = $("#hero").getBoundingClientRect();
   return (
+    !document.documentElement.classList.contains("js-loading") &&
     !activeDestination &&
     !diving &&
     !$("dialog[open]") &&
@@ -300,6 +415,16 @@ function canChangeScene() {
   );
 }
 function stepScene(direction) {
+  if (sceneBusy) {
+    queuedScene = Math.max(
+      0,
+      Math.min(
+        destinations.length - 1,
+        (preparingScene ?? queuedScene ?? scene) + direction,
+      ),
+    );
+    return;
+  }
   if (direction > 0 && scene === destinations.length - 1) {
     location.hash = "experiences";
   } else if (direction < 0 && scene === 0) {
@@ -335,7 +460,7 @@ $("#hero").addEventListener(
   (event) => {
     touchStart =
       event.touches.length === 1
-        ? { x: event.touches[0].clientX, $$: event.touches[0].clientY }
+        ? { x: event.touches[0].clientX, y: event.touches[0].clientY }
         : null;
   },
   { passive: true },
@@ -358,7 +483,7 @@ $("#hero").addEventListener(
   (event) => {
     if (!touchStart || !canChangeScene()) return;
     const dx = touchStart.x - event.changedTouches[0].clientX,
-      dy = touchStart.$$ - event.changedTouches[0].clientY;
+      dy = touchStart.y - event.changedTouches[0].clientY;
     touchStart = null;
     if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy))
       selectScene(scene + Math.sign(dx));
@@ -394,9 +519,10 @@ function renderDestination(place) {
   $("#destination-page").hidden = false;
   document.body.classList.add("destination-mode");
   document.title = `${place.name} — A Rare Wish`;
+  arrivalTrailer?.destroy();
   const video = $("#arrival-video");
   video.poster = imagePath(place.images[0]);
-  video.src = `assets/video/${place.slug}.mp4`;
+  arrivalTrailer = new DestinationTrailer($("#arrival-trailer"), place.slug);
   $("#arrival-region").textContent = place.region;
   $("#arrival-title").textContent = place.name;
   $("#arrival-intro").textContent = place.intro;
@@ -422,6 +548,7 @@ function renderDestination(place) {
 }
 function route() {
   cancelDive();
+  cancelSceneTransition();
   const hash = location.hash.slice(1);
   if (hash.startsWith("destination/")) {
     const place = destinations.find((item) => item.slug === hash.slice(12));
@@ -436,6 +563,8 @@ function route() {
     $("#place-details").scrollIntoView();
     return;
   }
+  arrivalTrailer?.destroy();
+  arrivalTrailer = null;
   activeDestination = null;
   $("#home").hidden = false;
   $("#destination-page").hidden = true;
@@ -463,13 +592,14 @@ function cancelDive() {
   clearTimeout(diveTimer);
   diveAnimation?.cancel();
   $("#dive-overlay").hidden = true;
+  $$("video", $(".dive-frame")).forEach((video) => video.pause());
   $(".dive-frame").replaceChildren();
   document.body.classList.remove("diving");
   $("#take-dive").disabled = false;
   diving = false;
 }
 $("#take-dive").addEventListener("click", () => {
-  if (diving) return;
+  if (diving || sceneBusy) return;
   const place = destinations[scene];
   if (motionPreference.matches) {
     location.hash = `destination/${place.slug}`;
@@ -485,10 +615,15 @@ $("#take-dive").addEventListener("click", () => {
   cabin.removeAttribute("id");
   $$("[id]", cabin).forEach((element) => element.removeAttribute("id"));
   $$(".place-scene:not(.active)", cabin).forEach((element) => element.remove());
-  const video = $("video", cabin);
-  video.currentTime = $(".place-scene.active video").currentTime;
+  const sourceVideo = homeTrailers[scene].current;
+  $$("video", cabin).forEach((video) => video.remove());
+  const video = sourceVideo.cloneNode(true);
+  video.removeAttribute("id");
+  $(".place-scene.active", cabin).append(video);
+  video.currentTime = sourceVideo.currentTime;
   video.muted = true;
   frame.replaceChildren(cabin);
+  syncMotion();
   Object.assign(frame.style, {
     left: `${stage.left}px`,
     top: `${stage.top}px`,
@@ -539,7 +674,7 @@ $$("dialog").forEach((dialog) => {
     attributeFilter: ["open"],
   });
 });
-selectScene(0);
+selectScene(0, false);
 route();
 
 function cabinWindowGeometry() {
@@ -566,3 +701,21 @@ function positionWindowLabel() {
 }
 new ResizeObserver(positionWindowLabel).observe($("#hero"));
 positionWindowLabel();
+
+// Intro readiness is bounded independently of app initialization and media.
+(async function finishIntro() {
+  const intro = window.RareWishIntro;
+  if (!intro) return;
+  intro.status("Opening your window to the world…");
+  const cabin = $("#cabin-photograph");
+  const imageReady = cabin.decode
+    ? cabin.decode().catch(() => {})
+    : Promise.resolve();
+  const mediaReady = paused ? Promise.resolve() : shownTrailer()?.prepare();
+  await Promise.race([
+    Promise.allSettled([document.fonts.ready, imageReady, mediaReady]),
+    delay(4500),
+  ]);
+  intro.status("Your next chapter is ready.");
+  intro.finish();
+})();
