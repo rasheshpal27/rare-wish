@@ -2,7 +2,7 @@
 
 The legacy destination pages use real camera footage in short, two-shot, silent trailer-style edits. The cabin homepage now follows all 22 experience previews below, starting with Antarctica; each uses the same film as its corresponding experience detail and arrival page. Each shot plays for approximately 8 seconds, with a 700 ms dissolve into the next. The edit repeats automatically. These are curated stock-footage sequences, not official tourism-board trailers.
 
-The former animated-photo MP4s have been removed from production. Still posters remain for loading, reduced motion, and network failure; they are never animated as replacement footage.
+The former animated-photo MP4s have been removed from production. Separate still posters have also been removed from the video players. They now show the actual decoded opening frame, with a neutral loading/error/video-off state.
 
 ## Source register
 
@@ -30,39 +30,40 @@ All six source pages link to the [Pexels License](https://www.pexels.com/license
 - Only the selected cabin experience and its next shot are buffered. During transitions, the outgoing and incoming trailers may briefly play together; the old stage’s media is unloaded after the transition. All 22 films are never downloaded together.
 - The source pages and license were accessible during implementation, **but this workspace cannot access the footage CDN**. Direct live playback and image quality could not be verified here. Check all three destination trailers and all 22 experience previews on the deployed preview before merging/releasing. External availability and autoplay policy can vary by browser/network.
 - Browser regression tests intercept the CDN requests with a clearly separated local playback fixture. They validate decoding, autoplay, shot sequencing, pausing, transitions, loading and errors—not the external footage's availability, quality, or geographic accuracy.
-- If the CDN fails, visitors see the static poster and an explicit retry control, not a fake moving-photo video. The initial loader always releases.
+- If the CDN fails, visitors see the neutral window and an explicit retry control, not a fake moving-photo video. The initial loader always releases.
 - For production reliability, download the selected source files under the license, encode web-sized H.264/fast-start versions, host them on your own asset origin, and replace the registered `src` values in the registry. Do not guess alternate Pexels rendition URLs.
 
 The browser connects to Pexels to play the footage, disclosing normal connection data such as the visitor's IP address. This is noted in the site's privacy dialog.
 
 ## Experience previews
 
-Every experience has an on-demand preview, using 16 additional source clips plus the six destination clips above. Single-source previews loop the original clip; multi-shot previews sequence short excerpts. These are real footage, not animated photos. All source pages and their exact linked MP4 renditions were inspected on **16 November 2026**, but the media CDN remains unverified from this workspace. No claim is made that generic footage depicts the actual bookable experience.
+Every experience has an on-demand preview, using 17 additional source clips plus the six destination clips above. Single-source previews loop the original clip; multi-shot previews sequence short excerpts. These are real footage, not animated photos. All source pages and their exact linked MP4 renditions were inspected on **16 November 2026**, but the media CDN remains unverified from this workspace. No claim is made that generic footage depicts the actual bookable experience.
 
-The source-page title/description is the identification basis, not independent location verification. The geography-sensitive and brand-specific limits below are also visible beside the relevant film. In particular, the gorilla clip has zoo tags; no Rwanda/mountain-gorilla provenance is claimed. The space preview is archival shuttle footage, not CGI and not a commercial flight offering. Japan uses a heritage-location clip rather than unrelated cosplay. Polo preserves the vertical source rather than cropping out the action.
+The source-page title/description is the identification basis, not independent location verification. The geography-sensitive and brand-specific limits below are also visible beside the relevant film. In particular, the gorilla clip has zoo tags; no Rwanda/mountain-gorilla provenance is claimed. The space preview is archival shuttle footage, not CGI and not a commercial flight offering. Japan uses a heritage-location clip rather than unrelated cosplay. Polo preserves the full vertical source in its full-film views; the cabin aperture still crops it and requires subject review.
 
-Two legacy Pixabay uploads link to Pexels' [Creative Commons page](https://www.pexels.com/creative-commons-images/) (CC0); the other additional clips link to the [Pexels License](https://www.pexels.com/license/). The non-endorsement and other use restrictions discussed above still matter. No sponsorship or brand association is implied.
+The legacy Pixabay shuttle upload links to Pexels' [Creative Commons page](https://www.pexels.com/creative-commons-images/) (CC0); the other additional clips link to the [Pexels License](https://www.pexels.com/license/). The non-endorsement and other use restrictions discussed above still matter. No sponsorship or brand association is implied.
 
 ### Additional source register
 
-| Key         | Source / creator                                                                                                     | License                                            |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| fieldRide   | [Source page](https://www.pexels.com/video/a-man-holding-his-hat-while-riding-a-horse-8625402/) · RDNE Stock project | Pexels                                             |
-| reef        | [Source page](https://www.pexels.com/video/underwater-view-of-marine-life-1151290/) · Tom Fisk                       | Pexels                                             |
-| diver       | [Source page](https://www.pexels.com/video/man-diving-underwater-5277921/) · Daniel Torobekov                        | Pexels                                             |
-| ring        | [Source page](https://www.pexels.com/video/a-diamond-laced-engagement-ring-on-display-4004214/) · Danish Hayat       | Pexels                                             |
-| gorilla     | [Source page](https://www.pexels.com/video/side-view-of-a-silverback-gorilla-8502226/) · Nicky Pe                    | Pexels                                             |
-| helicopter  | [Source page](https://www.pexels.com/video/helicopter-flying-over-village-12359720/) · Robart Ghimire                | Pexels                                             |
-| beachRide   | [Source page](https://www.pexels.com/video/horseback-riding-at-the-beach-856643/) · Pixabay                          | CC0 (source links to Pexels Creative Commons page) |
-| golf        | [Source page](https://www.pexels.com/video/drone-footage-of-a-golf-course-6070745/) · Curtis Adams                   | Pexels                                             |
-| vatican     | [Source page](https://www.pexels.com/video/stunning-aerial-view-of-vatican-city-at-sunset-31820461/) · Florian Delée | Pexels                                             |
-| volcano     | [Source page](https://www.pexels.com/video/a-footage-of-a-volcano-erupting-9882072/) · Martin Sanchez                | Pexels                                             |
-| winterDrive | [Source page](https://www.pexels.com/video/car-driving-on-road-in-forest-in-winter-9871284/) · Maksim Goncharenok    | Pexels                                             |
-| kumbh       | [Source page](https://www.pexels.com/video/vibrant-rituals-at-kumbh-mela-festival-31094211/) · Jay paul              | Pexels                                             |
-| japan       | [Source page](https://www.pexels.com/video/close-up-of-the-kinkaku-ji-temple-5854336/) · The Instagrapher            | Pexels                                             |
-| launch      | [Source page](https://www.pexels.com/video/launching-of-rocket-854261/) · Pixabay                                    | CC0 (source links to Pexels Creative Commons page) |
-| polo        | [Source page](https://www.pexels.com/video/aerial-view-of-a-horse-polo-match-39429454/) · ProLens                    | Pexels                                             |
-| coast       | [Source page](https://www.pexels.com/video/diani-beach-drone-footage-kwale-county-kenya-27784993/) · Kelvin Kibe     | Pexels                                             |
+| Key           | Source / creator                                                                                                       | License                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| fieldRide     | [Source page](https://www.pexels.com/video/a-man-holding-his-hat-while-riding-a-horse-8625402/) · RDNE Stock project   | Pexels                                             |
+| reef          | [Source page](https://www.pexels.com/video/underwater-view-of-marine-life-1151290/) · Tom Fisk                         | Pexels                                             |
+| diver         | [Source page](https://www.pexels.com/video/man-diving-underwater-5277921/) · Daniel Torobekov                          | Pexels                                             |
+| ring          | [Source page](https://www.pexels.com/video/a-diamond-laced-engagement-ring-on-display-4004214/) · Danish Hayat         | Pexels                                             |
+| gorilla       | [Source page](https://www.pexels.com/video/side-view-of-a-silverback-gorilla-8502226/) · Nicky Pe                      | Pexels                                             |
+| helicopter    | [Source page](https://www.pexels.com/video/helicopter-flying-over-village-12359720/) · Robart Ghimire                  | Pexels                                             |
+| beachRide     | [Source page](https://www.pexels.com/video/a-drone-footage-of-people-riding-a-horses-on-the-beach-14915401/) · Jessi X | Pexels                                             |
+| golf          | [Source page](https://www.pexels.com/video/drone-footage-of-a-golf-course-6070745/) · Curtis Adams                     | Pexels                                             |
+| vatican       | [Source page](https://www.pexels.com/video/stunning-aerial-view-of-vatican-city-at-sunset-31820461/) · Florian Delée   | Pexels                                             |
+| volcano       | [Source page](https://www.pexels.com/video/a-footage-of-a-volcano-erupting-9882072/) · Martin Sanchez                  | Pexels                                             |
+| winterDrive   | [Source page](https://www.pexels.com/video/car-driving-on-road-in-forest-in-winter-9871284/) · Maksim Goncharenok      | Pexels                                             |
+| kumbh         | [Source page](https://www.pexels.com/video/vibrant-rituals-at-kumbh-mela-festival-31094211/) · Jay paul                | Pexels                                             |
+| japan         | [Source page](https://www.pexels.com/video/close-up-of-the-kinkaku-ji-temple-5854336/) · The Instagrapher              | Pexels                                             |
+| launch        | [Source page](https://www.pexels.com/video/launching-of-rocket-854261/) · Pixabay                                      | CC0 (source links to Pexels Creative Commons page) |
+| polo          | [Source page](https://www.pexels.com/video/aerial-view-of-a-horse-polo-match-39429454/) · ProLens                      | Pexels                                             |
+| coast         | [Source page](https://www.pexels.com/video/diani-beach-drone-footage-kwale-county-kenya-27784993/) · Kelvin Kibe       | Pexels                                             |
+| craftsmanship | [Source page](https://www.pexels.com/video/close-up-shot-of-a-person-making-jewelry-6262806/) · Tima Miroshnichenko    | Pexels                                             |
 
 ### Experience mapping and limits
 
@@ -82,7 +83,7 @@ Two legacy Pixabay uploads link to Pexels' [Creative Commons page](https://www.p
 | Palau history dive                 | Illustrative reef diving; not verified as Palau or its historic wreck sites.                                          |
 | Porsche Ice Experience             | Generic winter driving; not a Porsche vehicle, official programme film or brand endorsement.                          |
 | The Diamond Experience             | Illustrative diamond jewellery; individual stones and appointments are confirmed separately.                          |
-| Piaget ‘Infinitely Personal’       | Generic jewellery inspiration; not a Piaget product, atelier or brand endorsement.                                    |
+| Piaget ‘Infinitely Personal’       | Independent jewellery craftsmanship; not a Piaget product, atelier or brand endorsement.                              |
 | Private Island in Kenya            | Publisher identifies Diani Beach, Kenya; not a specific private island or property.                                   |
 | Man vs Wild in Maasai Mara         | Kenyan wildlife scenery; not footage of a survival programme or exclusively the Maasai Mara.                          |
 | Wellness and Golf                  | Illustrative golf-course scenery; not a particular wellness resort.                                                   |
@@ -93,6 +94,12 @@ Two legacy Pixabay uploads link to Pexels' [Creative Commons page](https://www.p
 
 ### Playback and music
 
-No footage is requested until welcome entry. Video is enabled by default except when the device requests reduced motion; the welcome checkbox lets visitors override either setting. Music is off unless explicitly approved. The ambient score is generated in the browser using original sine-tone arrangements, with no third-party song, download, or audio licence dependency. Hidden tabs suspend audio. Music and video preferences are independent and are not stored.
+No footage is requested until welcome entry. Video is enabled by default except when the device requests reduced motion; the welcome checkbox lets visitors override either setting. Music is off unless explicitly approved. The light travel motif is generated in the browser using soft, short C-major-pentatonic sine-tone plucks without low sustained drones, with no third-party song, download, or audio licence dependency. Hidden tabs suspend audio. Music and video preferences are independent and are not stored.
 
-The cabin shows all 22 experience previews, starting with Antarctica, with a film-notes control linking to the relevant detail disclosure. The experience collection uses still thumbnails; opening a detail loads only its clip(s). Closing/replacing the detail unloads its sources. Videos are always muted; audible music is controlled separately. External media bytes are delivered by Pexels, not Netlify.
+The cabin shows all 22 experience previews, starting with Antarctica, with a film-notes control linking to the relevant detail disclosure. The experience collection uses paused opening frames decoded from the actual films; only visible thumbnails request video data (and only if video is enabled); opening a detail loads its clip(s). Closing/replacing the detail unloads its sources. Videos are always muted; audible music is controlled separately. External media bytes are delivered by Pexels, not Netlify.
+
+## Follow-up review status
+
+The beach-riding replacement (14915401) and separate jewellery-craft film (6262806) were selected from their source pages and exact linked renditions. They are not visually confirmed as moving footage here. The former beach source 856643 is no longer used. Diamond and Piaget no longer share a film or a photo thumbnail.
+
+Every experience mapping remains covered by browser tests. All media retain their source aspect ratio, the main window stays centered on its configured focus, and invisible apertures no longer increase the mobile crop. However, **a per-timestamp visual subject review of the 23 unique live clips is still outstanding**: Pexels CDN access fails in this workspace. In particular, the desktop gorilla crop and the moving beach-rider composition need review using reachable video files. Source-page descriptions, the native first-frame implementation and test fixtures do not prove subject visibility throughout a clip.

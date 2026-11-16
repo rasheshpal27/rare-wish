@@ -38,6 +38,7 @@
     <script src="assets/js/experience-films.js" defer></script>
     <script src="assets/js/music.js" defer></script>
     <script src="assets/js/content.js" defer></script>
+    <script src="assets/js/film-thumbnails.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <script type="application/ld+json">
       {
@@ -110,9 +111,15 @@
         <a href="#experiences">The experiences</a><a href="#worlds">Our world</a
         ><a href="#process">The rare way</a>
       </nav>
-      <button class="wish-button" data-enquire>
-        Make a wish <span>↗</span>
-      </button>
+      <a
+        class="wish-button whatsapp-primary"
+        href="https://wa.me/919769825919"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Let’s talk on WhatsApp (opens a new tab)"
+      >
+        WhatsApp <span>↗</span>
+      </a>
       <button
         class="menu-button"
         id="menu-button"
@@ -144,7 +151,6 @@
                   muted
                   playsinline
                   preload="none"
-                  poster="assets/img/antarctica.webp"
                   aria-label="Explore Antarctica video preview"
                 ></video>
               </div>
@@ -613,7 +619,17 @@
             Make this my wish ↗
           </button>
         </div>
-        <img id="place-image" alt="" loading="lazy" />
+        <div id="place-preview">
+          <video
+            class="film-thumbnail"
+            data-film-thumbnail=""
+            muted
+            playsinline
+            preload="none"
+            aria-label="Opening frame of this experience film"
+          ></video
+          ><span class="film-thumbnail-label">Film preview</span>
+        </div>
       </section>
       <section class="place-possibilities section-pad">
         <span class="eyebrow">YOUR DAYS, BEAUTIFULLY DIFFERENT</span>
@@ -643,6 +659,7 @@
         >
         <div class="footer-links">
           <a
+            class="button whatsapp-primary footer-whatsapp"
             href="https://wa.me/919769825919"
             target="_blank"
             rel="noopener noreferrer"
@@ -712,7 +729,6 @@
         class="experience-film"
         aria-label="Experience video preview"
       >
-        <img id="detail-image" src="assets/img/hero.webp" alt="" />
         <video
           id="detail-video"
           muted

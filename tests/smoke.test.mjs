@@ -1094,3 +1094,174 @@ test(
     }
   },
 );
+
+test(
+  "real opening-frame previews, distinct films, mobile crop, lighter music and WhatsApp focus",
+  { timeout: 90000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+      });
+      await stubFootage(page);
+      await page.addInitScript(() => {
+        window.testFrequencies = [];
+        const original = AudioContext.prototype.createOscillator;
+        AudioContext.prototype.createOscillator = function () {
+          const oscillator = original.call(this),
+            start = oscillator.start.bind(oscillator);
+          oscillator.start = (...args) => {
+            window.testFrequencies.push(oscillator.frequency.value);
+            start(...args);
+          };
+          return oscillator;
+        };
+      });
+      await page.goto(base);
+      await page.locator("#enter-with-music").click();
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(await page.locator("video[poster]").count(), 0);
+      assert.equal(
+        await page
+          .locator("#detail-image, #place-image, .experience-card img")
+          .count(),
+        0,
+      );
+      const style = await page.locator("#window-glass-label").evaluate((el) => {
+        const css = getComputedStyle(el);
+        return {
+          background: css.backgroundImage,
+          color: css.backgroundColor,
+          border: css.borderTopWidth,
+          shadow: css.boxShadow,
+        };
+      });
+      assert.deepEqual(style, {
+        background: "none",
+        color: "rgba(0, 0, 0, 0)",
+        border: "0px",
+        shadow: "none",
+      });
+      const frequencies = await page.evaluate(() => testFrequencies);
+      assert.ok(frequencies.length >= 8);
+      assert.ok(
+        frequencies.every((f) => f >= 392 && f <= 784),
+        "no low drone notes",
+      );
+      assert.notEqual(
+        await page.evaluate(() => EXPERIENCE_FILMS.diamond.clips[0].src),
+        await page.evaluate(() => EXPERIENCE_FILMS.piaget.clips[0].src),
+      );
+      assert.match(
+        await page.evaluate(() => EXPERIENCE_FILMS.ponies.clips[0].src),
+        /14915401/,
+      );
+
+      // Preparation decodes the opening frame without playing it behind another scene.
+      await page.evaluate(async () => {
+        await homeTrailers[7].prepare();
+      });
+      assert.equal(
+        await page.evaluate(() => homeTrailers[7].current.paused),
+        true,
+      );
+      assert.ok(
+        await page.evaluate(
+          () =>
+            homeTrailers[7].current.currentTime < 0.1 &&
+            homeTrailers[7].current.readyState >= 2,
+        ),
+      );
+      await page.evaluate(() => homeTrailers[7].unload());
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(100);
+      const framing = await page.evaluate(() => {
+        const stage = document.querySelector("#cabin-view"),
+          g = CabinViewport.geometry(stage);
+        const scale = Math.max(
+          stage.clientWidth / 1376,
+          stage.clientHeight / 768,
+        );
+        const offset = (stage.clientWidth - 1376 * scale) * 0.68;
+        return {
+          right: g.bounds.right,
+          viewport: stage.clientWidth,
+          width: parseFloat(homeTrailers[0].current.style.width),
+          oldRightOverscan: (1376 * scale + offset - g.x + 2) * 2,
+        };
+      });
+      assert.ok(framing.right <= framing.viewport);
+      assert.ok(
+        framing.width < framing.oldRightOverscan,
+        "off-screen second window no longer enlarges the primary subject",
+      );
+      const contact = page.locator(".header .whatsapp-primary");
+      assert.equal(
+        await contact.getAttribute("href"),
+        "https://wa.me/919769825919",
+      );
+      assert.equal(await contact.getAttribute("target"), "_blank");
+      await page.keyboard.press("Tab");
+      await contact.focus();
+      assert.equal(
+        await contact.evaluate((el) => getComputedStyle(el).outlineStyle),
+        "solid",
+      );
+
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.evaluate(() => openCollection());
+      await page.locator("#experience-search").fill("Piaget");
+      const thumb = page.locator("#collection-results video");
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#collection-results video")?.dataset.ready ===
+          "true",
+      );
+      assert.equal(await thumb.evaluate((v) => v.paused), true);
+      assert.ok(await thumb.evaluate((v) => v.currentTime < 0.1));
+      assert.match(await thumb.getAttribute("src"), /6262806/);
+      assert.equal(await page.locator("#collection-results img").count(), 0);
+      await page.locator("#experience-search").fill("Diamond");
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#collection-results video")?.dataset.ready ===
+          "true",
+      );
+      assert.match(await thumb.getAttribute("src"), /4004214/);
+      await page.locator("#collection-dialog .close-dialog").click();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#collection-results video")].every(
+          (v) => !v.hasAttribute("src"),
+        ),
+      );
+
+      // Disabling video also prevents the new thumbnail system from fetching clips.
+      const silent = await browser.newPage();
+      const requests = [];
+      await stubFootage(silent);
+      silent.on("request", (request) => {
+        if (request.url().includes("videos.pexels.com"))
+          requests.push(request.url());
+      });
+      await silent.goto(base);
+      await silent.locator("#intro-video").uncheck();
+      await silent.locator("#skip-intro").click();
+      await silent.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      await silent.evaluate(() => openCollection());
+      await silent.waitForTimeout(300);
+      assert.equal(requests.length, 0);
+      assert.equal(await silent.locator("video[poster]").count(), 0);
+    } finally {
+      await browser.close();
+    }
+  },
+);

@@ -1,7 +1,9 @@
 "use strict";
 const $ = (s, root = document) => root.querySelector(s),
   $$ = (s, root = document) => [...root.querySelectorAll(s)];
-const imagePath = (name) => `assets/img/${name}.webp`;
+const filmThumbnails = new FilmThumbnails();
+const thumbnailMarkup = (id) =>
+  `<video class="film-thumbnail" data-film-thumbnail="${EXPERIENCE_FILMS[id].clips[0].src}" muted playsinline preload="none" aria-hidden="true"></video><span class="film-thumbnail-label">Film preview</span>`;
 let activeCategory = "All",
   cardOffset = 0;
 const filteredExperiences = () =>
@@ -9,12 +11,13 @@ const filteredExperiences = () =>
     (e) => activeCategory === "All" || e.category === activeCategory,
   );
 function renderCards() {
+  filmThumbnails.release($("#experience-grid"));
   const e = filteredExperiences(),
     t = e.slice(cardOffset, cardOffset + 3);
   (($("#experience-grid").innerHTML = t
     .map(
       (i, n) =>
-        `<button class="experience-card enter" data-experience="${i.id}" style="animation-delay:${n * 70}ms" aria-label="Discover ${i.title}"><div class="experience-image"><img src="${imagePath(i.image)}" alt="${i.short}" width="700" height="850"/><span class="card-number">${String(experiences.indexOf(i) + 1).padStart(2, "0")} / A RARE EXPERIENCE</span><span class="card-category">${i.category.toUpperCase()}</span><span class="card-arrow">↗</span></div><div class="card-info"><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.short}</p></div></button>`,
+        `<button class="experience-card enter" data-experience="${i.id}" style="animation-delay:${n * 70}ms" aria-label="Discover ${i.title}"><div class="experience-image">${thumbnailMarkup(i.id)}<span class="card-number">${String(experiences.indexOf(i) + 1).padStart(2, "0")} / A RARE EXPERIENCE</span><span class="card-category">${i.category.toUpperCase()}</span><span class="card-arrow">↗</span></div><div class="card-info"><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.short}</p></div></button>`,
     )
     .join("")),
     ($("#collection-count").textContent =
@@ -24,6 +27,7 @@ function renderCards() {
   if (!e.length)
     $("#experience-grid").innerHTML =
       '<div class="no-results"><h3>A wish beyond the list?</h3><p>Choose another category, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>';
+  filmThumbnails.observe($("#experience-grid"));
 }
 $$("[data-filter]").forEach((e) =>
   e.addEventListener("click", () => {
@@ -89,8 +93,6 @@ function openExperience(e) {
   const t = experiences.find((i) => i.id === e);
   t &&
     ((selectedExperience = t),
-    ($("#detail-image").src = imagePath(t.image)),
-    ($("#detail-image").alt = `${t.location} — illustrative travel imagery`),
     ($("#detail-location").textContent =
       `${t.category.toUpperCase()} / ${t.location.toUpperCase()}`),
     ($("#detail-title").textContent = t.title),
@@ -99,7 +101,6 @@ function openExperience(e) {
   if (!t) return;
   releaseExperienceFilm();
   const film = EXPERIENCE_FILMS[t.id];
-  $("#detail-video").poster = imagePath(t.image);
   $("#detail-film-note").textContent = `ILLUSTRATIVE FILM · ${film.note}`;
   experienceTrailer = new DestinationTrailer($("#detail-trailer"), t.id, film);
   syncMotion();
@@ -112,6 +113,7 @@ document.addEventListener("click", (e) => {
 });
 let collectionCategory = "All";
 function renderCollection() {
+  filmThumbnails.release($("#collection-results"));
   const e = $("#experience-search").value.trim().toLowerCase(),
     t = experiences.filter(
       (i) =>
@@ -126,10 +128,11 @@ function renderCollection() {
       ? t
           .map(
             (i) =>
-              `<button class="result-card" data-experience="${i.id}"><div><img src="${imagePath(i.image)}" alt="" width="450" height="300"/><span class="result-arrow">↗</span></div><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.category}</p></button>`,
+              `<button class="result-card" data-experience="${i.id}"><div>${thumbnailMarkup(i.id)}<span class="result-arrow">↗</span></div><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.category}</p></button>`,
           )
           .join("")
       : '<div class="no-results"><h3>A wish beyond the list?</h3><p>Try another search, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>'));
+  filmThumbnails.observe($("#collection-results"));
 }
 function openCollection(e = "All") {
   ((collectionCategory = e),
@@ -324,13 +327,12 @@ function syncMotion() {
       trailer.unload();
       return;
     }
-    trailer.videos.forEach((video) => {
-      if (!video.getAttribute("poster"))
-        video.poster = imagePath(cabinExperiences[index].images[0]);
-    });
-    trailer.setEnabled(allowed && !diving);
+    // Decode the incoming opening frame while the outgoing film remains visible.
+    // Do not start the incoming film until its scene is actually revealed.
+    trailer.setEnabled(allowed && !diving && index !== preparingScene);
   });
   arrivalTrailer?.setEnabled(allowed && !!activeDestination);
+  filmThumbnails.sync(visible);
   updatePlaybackControls();
 }
 document.addEventListener("trailerstatechange", updatePlaybackControls);
@@ -388,7 +390,7 @@ async function selectScene(index, animate = true) {
   preparingScene = index;
   $("#take-dive").disabled = true;
   // Request a decoded incoming frame before crossfading. Bounded wait: a broken
-  // CDN must never lock navigation; the static poster and retry control remain.
+  // CDN must never lock navigation; the neutral window and retry control remain (never a mismatched photo).
   if (!paused) {
     syncMotion();
     await Promise.race([homeTrailers[index].prepare(), delay(2200)]);
@@ -595,8 +597,6 @@ function renderDestination(place) {
   document.body.classList.remove("cabin-in-view");
   document.title = `${place.name} — A Rare Wish`;
   arrivalTrailer?.destroy();
-  const video = $("#arrival-video");
-  video.poster = imagePath(place.images[0]);
   arrivalTrailer = new DestinationTrailer(
     $("#arrival-trailer"),
     place.slug,
@@ -610,8 +610,12 @@ function renderDestination(place) {
     : "Illustrative destination footage. See Film credits for source and location details.";
   $("#place-heading").innerHTML = place.title;
   $("#place-description").textContent = place.description;
-  $("#place-image").src = imagePath(place.images[1]);
-  $("#place-image").alt = `${place.name} — illustrative experience imagery`;
+  filmThumbnails.release($("#place-preview"));
+  const preview = $("#place-preview video");
+  preview.dataset.filmThumbnail = (
+    place.film || TRAILERS[place.slug]
+  ).clips[0].src;
+  filmThumbnails.observe($("#place-preview"));
   $("#place-enquire").dataset.enquire = place.wish;
   $("#place-highlights").innerHTML = place.highlights
     .map(

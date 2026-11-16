@@ -1122,3 +1122,104 @@ html.js-loading .site-loader {
     top: 112px;
   }
 }
+
+/* Typography sits directly on the glass, never in a rectangular panel. */
+.window-glass-label {
+  background: none;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+/* No unrelated poster photographs: the media's opening frame is its preview. */
+.cabin-outside {
+  background: #172a29;
+}
+.experience-image,
+.result-card > div,
+#place-preview {
+  background: #172a29;
+}
+.film-thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+}
+.film-thumbnail[data-ready="true"] {
+  opacity: 1;
+}
+.film-thumbnail-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #dedbd0;
+  font-size: 11px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.film-thumbnail[data-ready="true"] + .film-thumbnail-label {
+  display: none;
+}
+#place-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+.experience-film:not(:has(video[src]))::after {
+  content: "Video paused · Choose Play video to preview";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  color: #e4e2cd;
+  font-size: 12px;
+  pointer-events: none;
+}
+/* A direct, high-contrast contact action, not a small footer text link. */
+.whatsapp-primary,
+.header .whatsapp-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 46px;
+  padding: 14px 22px;
+  background: #284d3d;
+  border: 1px solid #b4c8b5;
+  color: #fff9ea;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: 0 5px 20px #14291d20;
+}
+.whatsapp-primary:hover,
+.footer-links .whatsapp-primary:hover {
+  background: #37674f;
+  color: #fff;
+}
+.whatsapp-primary:focus-visible {
+  outline: 3px solid #bc9350;
+  outline-offset: 4px;
+}
+.footer-links {
+  align-items: center;
+}
+.footer-whatsapp {
+  font-size: 14px;
+  padding: 18px 26px;
+}
+@media (max-width: 760px) {
+  .header .whatsapp-primary {
+    padding: 10px 12px;
+    min-height: 44px;
+    font-size: 10px;
+    gap: 8px;
+  }
+}

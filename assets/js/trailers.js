@@ -64,6 +64,8 @@ class DestinationTrailer {
     this.videos = [first, second];
     this.videos.forEach((video, i) => {
       video.removeAttribute("src");
+      video.removeAttribute("poster");
+      delete video.dataset.frameReady;
       video.replaceChildren();
       video.removeAttribute("autoplay"); // Enabled explicitly; inactive scenes never autoplay.
       video.loop = this.clips.length === 1;
@@ -78,6 +80,9 @@ class DestinationTrailer {
       video.classList.add("trailer-shot");
       video.classList.toggle("trailer-front", i === 0);
       listen("loadedmetadata", () => CabinViewport.frame(video));
+      listen("loadeddata", () => {
+        video.dataset.frameReady = "true";
+      });
       listen("playing", () => {
         if (!this.enabled) {
           video.pause();
@@ -120,12 +125,13 @@ class DestinationTrailer {
   }
   assign(video, clip) {
     // Optional focal point per shot. Defaults keep the center of the original
-    // composition visible through the main window, including its poster.
+    // composition visible through the main window, including its decoded opening frame.
     video.style.objectFit = clip.fit || "cover";
     video.dataset.windowFocusX = String(clip.windowFocus?.x ?? 0.5);
     video.dataset.windowFocusY = String(clip.windowFocus?.y ?? 0.5);
     CabinViewport.frame(video);
     if (video.getAttribute("src") === clip.src) return;
+    delete video.dataset.frameReady;
     video.preload = "auto";
     video.src = clip.src;
     video.load();
@@ -251,6 +257,7 @@ class DestinationTrailer {
       video.pause();
       video.removeAttribute("src");
       video.removeAttribute("poster");
+      delete video.dataset.frameReady;
       video.load();
       video.classList.toggle("trailer-front", index === 0);
     });
