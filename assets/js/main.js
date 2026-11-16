@@ -45,6 +45,7 @@ $("#cards-next").addEventListener("click", () => {
 renderCards();
 let dialogTrigger = null;
 function openDialog(e) {
+  if ($("#experience-dialog").open) releaseExperienceFilm();
   ($("dialog[open]") || (dialogTrigger = document.activeElement),
     $$("dialog[open]").forEach((t) => t.close()),
     e.showModal(),
@@ -71,7 +72,19 @@ $$("dialog").forEach((e) => {
         dialogTrigger?.focus({ preventScroll: !0 }));
     }));
 });
-let selectedExperience = null;
+let selectedExperience = null,
+  experienceTrailer = null;
+function releaseExperienceFilm() {
+  experienceTrailer?.destroy();
+  experienceTrailer = null;
+  $("#detail-trailer").removeAttribute("data-playback");
+}
+$("#experience-dialog").addEventListener("close", () => {
+  if (!$("#experience-dialog").open) {
+    releaseExperienceFilm();
+    syncMotion();
+  }
+});
 function openExperience(e) {
   const t = experiences.find((i) => i.id === e);
   t &&
@@ -83,6 +96,13 @@ function openExperience(e) {
     ($("#detail-title").textContent = t.title),
     ($("#detail-description").textContent = t.description),
     openDialog($("#experience-dialog")));
+  if (!t) return;
+  releaseExperienceFilm();
+  const film = EXPERIENCE_FILMS[t.id];
+  $("#detail-video").poster = imagePath(t.image);
+  $("#detail-film-note").textContent = `ILLUSTRATIVE FILM · ${film.note}`;
+  experienceTrailer = new DestinationTrailer($("#detail-trailer"), t.id, film);
+  syncMotion();
 }
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-experience]");
@@ -229,7 +249,9 @@ document.addEventListener("keydown", (e) => {
 // dissolve: old footage keeps playing until the incoming scene has settled.
 const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
 let scene = 0,
-  paused = motionPreference.matches,
+  paused = !(
+    window.RareWishIntro?.preferences.video ?? !motionPreference.matches
+  ),
   diving = false,
   gestureTimer;
 let wheelGesture = false,
@@ -248,7 +270,11 @@ let sceneBusy = false,
 let sceneAnimations = [];
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function shownTrailer() {
-  return activeDestination ? arrivalTrailer : homeTrailers[scene];
+  return $("#experience-dialog").open
+    ? experienceTrailer
+    : activeDestination
+      ? arrivalTrailer
+      : homeTrailers[scene];
 }
 function updatePlaybackControls() {
   const player = shownTrailer();
@@ -265,7 +291,12 @@ function updatePlaybackControls() {
   });
 }
 function syncMotion() {
-  const allowed = !paused && !document.hidden && !$("dialog[open]");
+  const visible =
+    !paused &&
+    !document.hidden &&
+    !document.documentElement.classList.contains("js-loading");
+  const allowed = visible && !$("dialog[open]");
+  experienceTrailer?.setEnabled(visible && $("#experience-dialog").open);
   homeTrailers.forEach((trailer, index) => {
     trailer.setEnabled(
       allowed &&
@@ -402,6 +433,16 @@ motionPreference.addEventListener("change", (event) => {
   syncMotion();
 });
 document.addEventListener("visibilitychange", syncMotion);
+document.addEventListener("mediapreferenceschange", () => {
+  paused = !window.RareWishIntro.preferences.video;
+  syncMotion();
+});
+document.addEventListener("introfinished", () => {
+  paused = !(
+    window.RareWishIntro?.preferences.video ?? !motionPreference.matches
+  );
+  syncMotion();
+});
 function canChangeScene() {
   const rect = $("#hero").getBoundingClientRect();
   return (
@@ -700,9 +741,9 @@ positionWindowLabel();
   const imageReady = cabin.decode
     ? cabin.decode().catch(() => {})
     : Promise.resolve();
-  const mediaReady = paused ? Promise.resolve() : shownTrailer()?.prepare();
+  // No external media is requested before the welcome preference is chosen.
   await Promise.race([
-    Promise.allSettled([document.fonts.ready, imageReady, mediaReady]),
+    Promise.allSettled([document.fonts.ready, imageReady]),
     delay(4500),
   ]);
   intro.status("Your next chapter is ready.");

@@ -31,6 +31,8 @@ async function stubFootage(page) {
 }
 async function enter(page, url) {
   await page.goto(url);
+  if (await page.locator("#site-loader").isVisible())
+    await page.locator("#skip-intro").click();
   await page.waitForFunction(
     () => !document.documentElement.classList.contains("js-loading"),
   );
@@ -62,6 +64,7 @@ test(
       });
       await page.goto(base);
       assert.equal(await page.locator("#site-loader").isVisible(), true);
+      await page.locator("#skip-intro").click();
       await page.waitForFunction(
         () => !document.documentElement.classList.contains("js-loading"),
       );
@@ -150,6 +153,7 @@ test(
       await page.locator("#arrival-title").waitFor();
       assert.equal(await page.locator("#arrival-title").textContent(), "Kenya");
       await page.reload();
+      await page.locator("#skip-intro").click();
       await page.waitForFunction(
         () => !document.documentElement.classList.contains("js-loading"),
       );
@@ -382,7 +386,13 @@ test(
       );
       await blocked.evaluate(() => {
         window.allowTestPlayback = true;
+        homeTrailers[0].current.dispatchEvent(new Event("canplay"));
+        homeTrailers[0].current.dispatchEvent(new Event("waiting"));
       });
+      assert.equal(
+        await blocked.evaluate(() => homeTrailers[0].state),
+        "blocked",
+      );
       await blocked.locator("#motion-toggle").click();
       await blocked.waitForFunction(
         () =>
@@ -631,6 +641,231 @@ test(
         "arrival remains full-bleed, not window-cropped",
       );
       await page.close();
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "welcome choices, opt-in music and on-demand films for all 22 experiences",
+  { timeout: 120000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+      });
+      await stubFootage(page);
+      const errors = [],
+        mediaRequests = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("request", (request) => {
+        if (request.url().includes("videos.pexels.com"))
+          mediaRequests.push(request.url());
+      });
+      await page.goto(base);
+      assert.equal(await page.locator("#intro-video").isChecked(), true);
+      assert.equal(
+        await page.evaluate(() => RareWishMusic.state),
+        "uninitialized",
+      );
+      // A healthy app never races past an unanswered music choice.
+      await page.waitForTimeout(7300);
+      assert.equal(await page.locator("#site-loader").isVisible(), true);
+      assert.equal(mediaRequests.length, 0);
+      await page.locator("#intro-video").uncheck();
+      await page.locator("#skip-intro").click();
+      await page.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      assert.equal(
+        await page.evaluate(() => RareWishMusic.state),
+        "uninitialized",
+      );
+      assert.equal(mediaRequests.length, 0);
+      await page.evaluate(() => openExperience("polo"));
+      assert.equal(
+        await page.locator("#detail-video").getAttribute("src"),
+        null,
+      );
+      await page.locator("#detail-motion-toggle").click();
+      await page.waitForFunction(() => experienceTrailer.state === "playing");
+      assert.equal(
+        await page.locator("#detail-video").evaluate((v) => v.style.objectFit),
+        "contain",
+      );
+      assert.equal(mediaRequests.length, 1); // One source, no unnecessary second buffer.
+      await page.locator("#experience-dialog .close-dialog").click();
+      await page.waitForFunction(() => experienceTrailer === null);
+      assert.equal(
+        await page.locator("#detail-video").getAttribute("src"),
+        null,
+      );
+
+      // Opt-in is a new gesture on every full page visit; no saved sound consent.
+      await page.reload();
+      assert.equal(
+        await page.evaluate(() => RareWishMusic.state),
+        "uninitialized",
+      );
+      await page.locator("#enter-with-music").click();
+      await page.waitForFunction(
+        () => RareWishMusic.enabled && RareWishMusic.state === "running",
+      );
+      await page.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      await page.locator(".music-control").click();
+      await page.waitForFunction(
+        () => !RareWishMusic.enabled && RareWishMusic.state === "suspended",
+      );
+      await page.locator(".music-control").click();
+      await page.waitForFunction(
+        () => RareWishMusic.enabled && RareWishMusic.state === "running",
+      );
+      await page.evaluate(() => {
+        Object.defineProperty(document, "hidden", {
+          configurable: true,
+          value: true,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await page.waitForFunction(
+        () =>
+          RareWishMusic.state === "suspended" &&
+          homeTrailers.every((t) => t.current.paused),
+      );
+      await page.evaluate(() => {
+        Object.defineProperty(document, "hidden", {
+          configurable: true,
+          value: false,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await page.waitForFunction(() => RareWishMusic.state === "running");
+
+      const ids = await page.evaluate(() => experiences.map((e) => e.id));
+      assert.equal(ids.length, 22);
+      assert.deepEqual(
+        await page.evaluate(() => Object.keys(EXPERIENCE_FILMS).sort()),
+        [...ids].sort(),
+      );
+      for (const id of ids) {
+        await page.evaluate((id) => openExperience(id), id);
+        await page.waitForFunction(
+          (id) =>
+            experienceTrailer?.slug === id &&
+            experienceTrailer.state === "playing",
+          id,
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            homeTrailers.every((t) => t.current.paused),
+          ),
+          true,
+        );
+        assert.equal(
+          await page.evaluate(
+            () =>
+              experienceTrailer.current.muted &&
+              experienceTrailer.current.playsInline,
+          ),
+          true,
+        );
+        assert.ok(
+          (await page.locator("#detail-film-note").textContent()).length > 40,
+        );
+        await page.locator("#detail-motion-toggle").click();
+        assert.equal(
+          await page.evaluate(() => experienceTrailer.current.paused),
+          true,
+        );
+        await page.locator("#detail-motion-toggle").click();
+        await page.waitForFunction(() => !experienceTrailer.current.paused);
+        await page.keyboard.press("Escape");
+        await page.waitForFunction(() => experienceTrailer === null);
+        assert.equal(await page.locator("#detail-trailer video").count(), 1);
+        assert.equal(
+          await page.locator("#detail-video").getAttribute("src"),
+          null,
+        );
+      }
+      await page.evaluate(() => openExperience("diamond"));
+      await page.locator("#detail-enquire").click();
+      await page.waitForFunction(() => experienceTrailer === null);
+      assert.equal(
+        await page.locator("#enquiry-dialog").evaluate((d) => d.open),
+        true,
+      );
+      assert.equal(
+        await page.locator("#detail-video").getAttribute("src"),
+        null,
+      );
+      assert.deepEqual(errors, []);
+
+      // Reduced motion is a safe default, but explicit welcome opt-in enables footage.
+      const mobile = await browser.newPage({
+        viewport: { width: 390, height: 844 },
+        reducedMotion: "reduce",
+      });
+      await stubFootage(mobile);
+      await mobile.goto(base);
+      assert.equal(await mobile.locator("#intro-video").isChecked(), false);
+      await mobile.locator("#intro-video").check();
+      await mobile.locator("#skip-intro").click();
+      await mobile.waitForFunction(() => homeTrailers[0].state === "playing");
+      await mobile.evaluate(() => openExperience("underwater"));
+      await mobile.waitForFunction(() => experienceTrailer.state === "playing");
+      assert.equal(
+        await mobile.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+      );
+      assert.equal(
+        await mobile
+          .locator("#experience-dialog")
+          .evaluate((d) => d.scrollWidth <= d.clientWidth),
+        true,
+      );
+
+      // Media and audio failures are explicit, recoverable, and never lock entry.
+      const broken = await browser.newPage();
+      await broken.route("https://videos.pexels.com/**", (route) =>
+        route.abort(),
+      );
+      await broken.addInitScript(() => {
+        window.AudioContext = class {
+          constructor() {
+            throw new Error("Unavailable");
+          }
+        };
+      });
+      await broken.goto(base);
+      await broken.locator("#enter-with-music").click();
+      await broken.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      assert.equal(await broken.evaluate(() => RareWishMusic.enabled), false);
+      assert.match(
+        await broken.locator(".music-control").textContent(),
+        /unavailable/,
+      );
+      await broken.evaluate(() => openExperience("wellness"));
+      await broken.waitForFunction(() => experienceTrailer.state === "error");
+      assert.match(
+        await broken.locator("#detail-motion-toggle").textContent(),
+        /Retry/,
+      );
+      await stubFootage(broken);
+      await broken.locator("#detail-motion-toggle").click();
+      await broken.waitForFunction(() => experienceTrailer.state === "playing");
     } finally {
       await browser.close();
     }

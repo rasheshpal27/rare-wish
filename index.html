@@ -35,6 +35,8 @@
     <script src="assets/js/loader.js"></script>
     <script src="assets/js/window-seat.js" defer></script>
     <script src="assets/js/trailers.js" defer></script>
+    <script src="assets/js/experience-films.js" defer></script>
+    <script src="assets/js/music.js" defer></script>
     <script src="assets/js/content.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <script type="application/ld+json">
@@ -52,15 +54,45 @@
     <div
       class="site-loader"
       id="site-loader"
-      aria-label="Preparing your journey"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-title"
     >
       <span class="loader-star" aria-hidden="true">✳</span>
       <div class="loader-brand">A Rare Wish</div>
       <p class="loader-eyebrow">EXTRAORDINARY IS WORTH THE WAIT</p>
       <div class="loader-track" aria-hidden="true"><span></span></div>
       <p id="loader-status" role="status">Preparing your window seat…</p>
-      <button id="skip-intro">Enter the experience ↗</button>
+      <div class="welcome-preferences">
+        <h1 id="welcome-title">Your journey. Your atmosphere.</h1>
+        <p>Would you like a little ambient music?</p>
+        <label class="video-choice"
+          ><input id="intro-video" type="checkbox" checked /> Play experience
+          videos</label
+        >
+        <p id="intro-video-note">
+          Muted videos are on by default. Turn them off to save data.
+        </p>
+        <p class="welcome-privacy">
+          Footage streams from Pexels. Music is created in your browser. You can
+          change either setting anytime.
+        </p>
+        <div class="welcome-actions">
+          <button class="button button-dark" id="enter-with-music">
+            Enter with music ♫
+          </button>
+          <button id="skip-intro">Continue without music ↗</button>
+        </div>
+      </div>
     </div>
+    <button
+      class="music-control"
+      data-music-toggle
+      aria-pressed="false"
+      aria-label="Turn music on"
+    >
+      Music off ♫
+    </button>
     <a class="skip-link" href="#experiences">Skip to experiences</a>
     <noscript
       ><p class="noscript-note">
@@ -634,7 +666,8 @@
       </div>
       <div class="footer-bottom">
         <span
-          >© <span id="year">2026</span> A Rare Wish. All rights reserved.</span
+          >© <span id="year">2026</span> A Rare Wish. All rights
+          reserved.</span
         ><span>THOUGHTFULLY CURATED. DEEPLY REMEMBERED.</span
         ><a href="VIDEO-SOURCES.md" target="_blank" rel="noopener"
           >Film credits ↗</a
@@ -681,13 +714,42 @@
         class="close-dialog image-close"
         aria-label="Close experience details"
       >
-        ×</button
-      ><img
-        id="detail-image"
-        src="assets/img/hero.webp"
-        loading="lazy"
-        alt=""
-      />
+        ×
+      </button>
+      <div
+        id="detail-trailer"
+        class="experience-film"
+        aria-label="Experience video preview"
+      >
+        <img id="detail-image" src="assets/img/hero.webp" alt="" />
+        <video
+          id="detail-video"
+          muted
+          playsinline
+          preload="none"
+          aria-hidden="true"
+        ></video>
+      </div>
+      <div class="film-toolbar">
+        <button
+          id="detail-motion-toggle"
+          data-motion-toggle
+          aria-pressed="false"
+        >
+          Pause video Ⅱ
+        </button>
+        <button
+          data-music-toggle
+          aria-pressed="false"
+          aria-label="Turn music on"
+        >
+          Music off ♫
+        </button>
+        <a href="VIDEO-SOURCES.md" target="_blank" rel="noopener"
+          >Film credits ↗</a
+        >
+      </div>
+      <p id="detail-film-note" class="film-note"></p>
       <div class="detail-content">
         <span class="eyebrow" id="detail-location"></span>
         <h2 id="detail-title"></h2>
@@ -806,9 +868,13 @@
       <p>
         WhatsApp and Instagram are external services governed by their own
         privacy policies. No analytics or advertising cookies are used by this
-        site. Destination footage streams from Pexels: your browser connects to
-        their CDN to play it, sharing normal connection information such as your
-        IP address. See Film credits for the footage sources.
+        site. Destination and experience footage streams from Pexels: your
+        browser connects to their CDN to play it, sharing normal connection
+        information such as your IP address. Turn video off on the welcome
+        screen to browse without video requests. Music is an optional,
+        browser-generated ambient score, enabled only by your choice; no audio
+        is downloaded. These settings last for this page visit only. See Film
+        credits for the footage sources.
       </p>
     </dialog>
     <div class="dive-overlay" id="dive-overlay" hidden aria-hidden="true">
