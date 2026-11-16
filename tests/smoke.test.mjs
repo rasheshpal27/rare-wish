@@ -41,6 +41,21 @@ test(
       });
       await page.goto(base);
       await page.locator("#take-dive").waitFor();
+      // Preserve the supplied cabin homepage; remove only the later plane film.
+      assert.equal(await page.locator("#cabin-photograph").isVisible(), true);
+      assert.equal(
+        await page.locator("#cabin-photograph").getAttribute("src"),
+        "assets/img/cabin.webp",
+      );
+      assert.match(
+        await page.locator("#hero-title").textContent(),
+        /A different/,
+      );
+      assert.equal(
+        await page.locator("#explore-window, .explore-copy").count(),
+        0,
+      );
+
       assert.equal(
         await page.locator("#scene-name").textContent(),
         "The Maldives",
@@ -81,6 +96,15 @@ test(
       // Window expansion is visible, Escape cancels, next activation arrives.
       await page.locator("#take-dive").click();
       assert.equal(await page.locator("#dive-overlay").isVisible(), true);
+      assert.equal(
+        await page.locator("#dive-overlay .cabin-photograph").count(),
+        1,
+      );
+      assert.equal(await page.locator("#dive-overlay .place-scene").count(), 1);
+      const zoomOrigin = await page.evaluate(() => cabinWindowGeometry());
+      assert.ok(zoomOrigin.x > 0 && zoomOrigin.x < 1440);
+      assert.ok(zoomOrigin.y > 0 && zoomOrigin.y < 1000);
+
       await page.keyboard.press("Escape");
       assert.equal(await page.locator("#dive-overlay").isVisible(), false);
       await page.locator("#take-dive").click();
@@ -99,17 +123,15 @@ test(
       await page.locator("#enquiry-dialog .close-dialog").click();
       await page.goto(`${base}/#home`);
       await page.locator('[data-stop="2"]').click();
-      await page
-        .locator("#hero")
-        .evaluate((hero) =>
-          hero.dispatchEvent(
-            new WheelEvent("wheel", {
-              deltaY: 100,
-              bubbles: true,
-              cancelable: true,
-            }),
-          ),
-        );
+      await page.locator("#hero").evaluate((hero) =>
+        hero.dispatchEvent(
+          new WheelEvent("wheel", {
+            deltaY: 100,
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+      );
       await page.waitForURL("**/#experiences");
 
       await page.locator("#view-all").click();
@@ -167,7 +189,7 @@ test(
         ),
         false,
       );
-      const nav = await page.locator(".place-stops").boundingBox();
+      const nav = await page.locator(".cabin-stops").boundingBox();
       assert.ok(
         nav.y + nav.height < 844,
         "destination controls are above the fold",

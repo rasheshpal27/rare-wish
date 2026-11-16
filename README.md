@@ -1,6 +1,6 @@
 # A Rare Wish
 
-An exploration-first static website: three destination windows, a through-the-window camera transition, 22 curated experiences, and a WhatsApp enquiry flow. No framework, backend, runtime dependencies or build step.
+A static website preserving the original cabin-window homepage: three destination views, a through-the-window camera transition, 22 curated experiences, and a WhatsApp enquiry flow. No framework, backend, runtime dependencies or build step.
 
 ## Run
 
@@ -16,14 +16,15 @@ Open `http://localhost:8080`. Alternatively, `npm start` runs the same server. D
 - Maldives → Kenya → Antarctica; the next downward gesture opens the experiences section. Upward gestures move back one place.
 - Destination buttons and arrow/Page Up/Page Down keys offer alternatives. Keyboard shortcuts never intercept focused links, buttons or form fields.
 - On full-screen phone layouts, one vertical swipe changes one place. Horizontal swipes also work. Short/landscape screens retain natural vertical scrolling so all controls remain reachable.
-- **Take a Dive** expands the actual destination window to the full viewport, followed by a second camera push into the landscape. Escape cancels it. No 3D aircraft or cabin-interior sequence remains.
+- **Take a Dive** zooms the original cabin view through its actual window opening into the destination. Escape cancels it. The cabin homepage is preserved; only the later 3D aircraft film is removed.
 - Reduced-motion users get an immediate route change and static posters by default. Motion can be paused on both home and destination views. Inactive/hidden videos pause automatically.
 - Enquiries prepare a URL-encoded WhatsApp message; nothing is submitted until the visitor opens WhatsApp and sends it. The site does not save enquiry data.
 
 ## Files
 
 - `index.html` — semantic page content, dialogs, metadata and video posters.
-- `assets/css/style.css` — responsive styling and motion preferences.
+- `assets/css/style.css` — shared responsive styling and motion preferences.
+- `assets/css/cabin.css` — restored original cabin-window composition and responsive rules.
 - `assets/js/content.js` — experience and destination data.
 - `assets/js/main.js` — discrete scene controls, route handling, transition, filtering and enquiry behavior.
 - `assets/img/`, `assets/fonts/` — extracted assets from the original supplied site; no base64 payloads in the document.
