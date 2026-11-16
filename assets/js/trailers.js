@@ -45,10 +45,10 @@ const TRAILERS = {
 // Two buffers keep a decoded frame on screen while the next shot is loading.
 // A short real-footage edit is assembled in the player; no simulated camera pan.
 class DestinationTrailer {
-  constructor(container, slug) {
+  constructor(container, slug, film = TRAILERS[slug]) {
     this.container = container;
     this.slug = slug;
-    this.clips = TRAILERS[slug].clips;
+    this.clips = film.clips;
     this.enabled = false;
     this.front = 0;
     this.clip = 0;
@@ -66,7 +66,7 @@ class DestinationTrailer {
       video.removeAttribute("src");
       video.replaceChildren();
       video.removeAttribute("autoplay"); // Enabled explicitly; inactive scenes never autoplay.
-      video.loop = false;
+      video.loop = this.clips.length === 1;
       video.muted = true;
       video.defaultMuted = true;
       video.playsInline = true;
@@ -86,7 +86,8 @@ class DestinationTrailer {
         if (video === this.current) this.setState("playing");
       });
       listen("waiting", () => {
-        if (this.enabled && video === this.current) this.setState("loading");
+        if (this.enabled && video === this.current && this.state !== "blocked")
+          this.setState("loading");
       });
       listen("canplay", () => {
         if (this.enabled && video === this.current) this.play(video);
@@ -120,6 +121,7 @@ class DestinationTrailer {
   assign(video, clip) {
     // Optional focal point per shot. Defaults keep the center of the original
     // composition visible through the main window, including its poster.
+    video.style.objectFit = clip.fit || "cover";
     video.dataset.windowFocusX = String(clip.windowFocus?.x ?? 0.5);
     video.dataset.windowFocusY = String(clip.windowFocus?.y ?? 0.5);
     CabinViewport.frame(video);
@@ -155,7 +157,15 @@ class DestinationTrailer {
     return ready;
   }
   async play(video) {
-    if (!this.enabled || !video.paused || video.error) return;
+    // A browser denial stays actionable until the visitor explicitly retries.
+    // Late canplay/visibility events must not race the Play button into Pause.
+    if (
+      !this.enabled ||
+      !video.paused ||
+      video.error ||
+      this.state === "blocked"
+    )
+      return;
     try {
       await video.play();
       if (!this.enabled) video.pause();
@@ -174,7 +184,10 @@ class DestinationTrailer {
     this.assign(this.current, this.clips[this.clip]);
     this.play(this.current);
     // Buffer just the next shot of the visible trailer, never every destination.
-    if (changed || !this.videos[1 - this.front].getAttribute("src")) {
+    if (
+      this.clips.length > 1 &&
+      (changed || !this.videos[1 - this.front].getAttribute("src"))
+    ) {
       this.assign(
         this.videos[1 - this.front],
         this.clips[(this.clip + 1) % this.clips.length],
@@ -182,7 +195,7 @@ class DestinationTrailer {
     }
   }
   async next() {
-    if (this.switching || !this.enabled) return;
+    if (this.switching || !this.enabled || this.clips.length === 1) return;
     this.switching = true;
     const generation = this.generation;
     const nextIndex = (this.clip + 1) % this.clips.length;

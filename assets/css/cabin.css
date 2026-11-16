@@ -815,3 +815,142 @@ html.loader-leaving .site-loader {
     --cabin-position-x: 68%;
   }
 }
+
+/* Welcome preferences are deliberate choices, not an autoplay-with-sound prompt. */
+html.js-loading .site-loader {
+  overflow-y: auto;
+}
+.site-loader .loader-star {
+  margin-bottom: 12px;
+}
+.site-loader .loader-eyebrow {
+  margin: 16px 0 22px;
+}
+.welcome-preferences {
+  max-width: 480px;
+  margin-top: 24px;
+}
+.welcome-preferences h1 {
+  font-family: var(--serif);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 400;
+}
+.welcome-preferences > p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.video-choice {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.video-choice input {
+  width: 18px;
+  height: 18px;
+  accent-color: #26362a;
+}
+.welcome-preferences #intro-video-note,
+.welcome-preferences .welcome-privacy {
+  font-size: 11px;
+  color: #626d61;
+}
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.welcome-actions #skip-intro {
+  margin: 0;
+  min-height: 44px;
+  font-size: 12px;
+}
+.music-control {
+  position: fixed;
+  z-index: 45;
+  bottom: 16px;
+  right: 18px;
+  padding: 12px 18px;
+  min-height: 44px;
+  border: 1px solid #d8d7ca;
+  border-radius: 30px;
+  background: #f5f2eaf5;
+  color: #26362a;
+  box-shadow: 0 3px 18px #0001;
+  font-size: 11px;
+}
+.experience-film {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #111a15;
+  overflow: hidden;
+}
+.experience-film > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.experience-film[data-playback="error"] video {
+  opacity: 0;
+}
+.experience-dialog .image-close {
+  z-index: 3;
+}
+.film-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 12px 30px 0;
+}
+.film-toolbar button,
+.film-toolbar a {
+  font-size: 11px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.film-note {
+  padding: 4px 30px 0;
+  color: #636e63;
+  font-size: 10px;
+  line-height: 1.7;
+}
+@media (max-width: 600px) {
+  .film-toolbar {
+    padding: 10px 20px 0;
+    gap: 4px 14px;
+  }
+  .film-note {
+    padding: 4px 20px 0;
+  }
+  .music-control {
+    bottom: 10px;
+    right: 10px;
+  }
+}
+@media (max-height: 720px) {
+  html.js-loading .site-loader {
+    justify-content: flex-start;
+    padding: 24px 20px;
+  }
+  .site-loader .loader-star {
+    display: none;
+  }
+  .welcome-preferences {
+    margin-top: 14px;
+  }
+  .site-loader .loader-brand {
+    font-size: 38px;
+  }
+}
