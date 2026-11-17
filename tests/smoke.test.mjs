@@ -24,9 +24,36 @@ const base = process.env.TEST_BASE_URL || "http://127.0.0.1:8080";
 const fixture = await readFile(
   new URL("./fixtures/playback.mp4", import.meta.url),
 );
+async function fulfillMedia(route, body) {
+  const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range || "");
+  if (!range)
+    return route.fulfill({
+      status: 200,
+      contentType: "video/mp4",
+      headers: {
+        "accept-ranges": "bytes",
+        "content-length": String(body.length),
+      },
+      body,
+    });
+  const start = Number(range[1]),
+    end = range[2]
+      ? Math.min(Number(range[2]), body.length - 1)
+      : body.length - 1;
+  return route.fulfill({
+    status: 206,
+    contentType: "video/mp4",
+    headers: {
+      "accept-ranges": "bytes",
+      "content-range": `bytes ${start}-${end}/${body.length}`,
+      "content-length": String(end - start + 1),
+    },
+    body: body.subarray(start, end + 1),
+  });
+}
 async function stubFootage(page) {
   await page.route("https://videos.pexels.com/**", (route) =>
-    route.fulfill({ status: 200, contentType: "video/mp4", body: fixture }),
+    fulfillMedia(route, fixture),
   );
 }
 async function enter(page, url) {
@@ -372,10 +399,14 @@ test(
       await settled(broken);
       assert.equal(
         await broken.locator("#scene-name").textContent(),
-        "Kenya Wildlife Safari",
+        "Explore Antarctica",
+      );
+      assert.match(
+        await broken.locator("#scene-load-status").textContent(),
+        /Keeping your current view/,
       );
       await stubFootage(broken);
-      await broken.locator("#motion-toggle").click();
+      await broken.locator("#journey-select").selectOption("1");
       await broken.waitForFunction(
         () =>
           !homeTrailers[1].current.paused &&
@@ -1096,7 +1127,7 @@ test(
 );
 
 test(
-  "real opening-frame previews, distinct films, mobile crop, lighter music and WhatsApp focus",
+  "native film previews, distinct films, unchanged mobile crop, restored music and WhatsApp focus",
   { timeout: 90000 },
   async () => {
     const browser = await chromium.launch({
@@ -1149,10 +1180,10 @@ test(
         shadow: "none",
       });
       const frequencies = await page.evaluate(() => testFrequencies);
-      assert.ok(frequencies.length >= 8);
+      assert.ok(frequencies.length >= 3);
       assert.ok(
-        frequencies.every((f) => f >= 392 && f <= 784),
-        "no low drone notes",
+        frequencies.every((f) => f >= 146 && f <= 441),
+        "original sustained ambient register restored",
       );
       assert.notEqual(
         await page.evaluate(() => EXPERIENCE_FILMS.diamond.clips[0].src),
@@ -1260,6 +1291,166 @@ test(
       await silent.waitForTimeout(300);
       assert.equal(requests.length, 0);
       assert.equal(await silent.locator("video[poster]").count(), 0);
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "quick opaque dissolves, slow-media retention and non-black thumbnails without reframing",
+  { timeout: 90000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+      });
+      const errors = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await stubFootage(page);
+      await enter(page, base);
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(
+        await page.locator(".window-composite").count(),
+        0,
+        "no canvas framing or blur reintroduced",
+      );
+      assert.equal(
+        await page.locator("#wild-story").count(),
+        1,
+        "Kenya page section untouched",
+      );
+      const nextURL = await page.evaluate(() => homeTrailers[1].clips[0].src);
+      let release;
+      const gate = new Promise((resolve) => {
+        release = resolve;
+      });
+      await page.route(nextURL, async (route) => {
+        await gate;
+        await fulfillMedia(route, fixture);
+      });
+      await page.locator("#journey-select").selectOption("1");
+      await page.waitForTimeout(2600);
+      assert.equal(
+        await page.evaluate(() => scene),
+        0,
+        "no timeout-driven cut to green",
+      );
+      assert.equal(
+        await page
+          .locator('[data-scene="0"]')
+          .evaluate((el) => getComputedStyle(el).opacity),
+        "1",
+      );
+      // Record intermediate computed styles in the page, not through slow IPC polling.
+      await page.evaluate(() => {
+        window.blendSamples = [];
+        const sample = () => {
+          const old = document.querySelector('[data-scene="0"]');
+          if (scene === 1 && sceneBusy) {
+            blendSamples.push({
+              oldOpacity: getComputedStyle(old).opacity,
+              ready: homeTrailers[1].current.readyState,
+              seeking: homeTrailers[1].current.seeking,
+              duration: getComputedStyle(
+                document.querySelector('[data-scene="1"]'),
+              ).transitionDuration,
+            });
+          }
+          if (sceneBusy) requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+      release();
+      await settled(page);
+      assert.equal(await page.evaluate(() => scene), 1);
+      const samples = await page.evaluate(() => blendSamples);
+      assert.ok(samples.length > 0);
+      assert.ok(
+        samples.every(
+          (s) =>
+            s.oldOpacity === "1" &&
+            s.ready >= 2 &&
+            !s.seeking &&
+            s.duration === "0.35s",
+        ),
+      );
+      assert.equal(await page.locator(".scene-underlay").count(), 0);
+      await page.evaluate(async () => {
+        await homeTrailers[1].next();
+      });
+      assert.equal(
+        await page
+          .locator('[data-scene="1"] .trailer-underlay')
+          .evaluate((el) => getComputedStyle(el).opacity),
+        "1",
+      );
+      await page.waitForFunction(() => !homeTrailers[1].switching);
+      assert.equal(await page.locator(".trailer-underlay").count(), 0);
+
+      const blackOpening = await readFile(
+        new URL("./fixtures/black-opening.mp4", import.meta.url),
+      );
+      const blackOnly = await readFile(
+        new URL("./fixtures/black-only.mp4", import.meta.url),
+      );
+      await page.route("https://videos.pexels.com/**", (route) =>
+        fulfillMedia(route, blackOpening),
+      );
+      await page.evaluate(() => {
+        location.hash = "experiences";
+      });
+      await page.locator("#experience-grid").scrollIntoViewIfNeeded();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#experience-grid video")].every(
+          (v) => v.dataset.ready === "true",
+        ),
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#experience-grid video")].every(
+            (v) => v.paused && v.currentTime >= 1 && FilmFrames.inspect(v),
+          ),
+        ),
+        true,
+        "thumbnails skip a genuinely black opening second",
+      );
+      // Clear sources to test entirely black content with the same visible cards.
+      await page.route("https://videos.pexels.com/**", (route) =>
+        fulfillMedia(route, blackOnly),
+      );
+      await page.evaluate(() => {
+        const grid = document.querySelector("#experience-grid");
+        filmThumbnails.release(grid);
+        filmThumbnails.observe(grid);
+      });
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#experience-grid video")].every(
+          (v) => v.dataset.ready === "false",
+        ),
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#experience-grid video")].every(
+            (v) => getComputedStyle(v).opacity === "0",
+          ),
+        ),
+        true,
+      );
+      assert.equal(
+        await page
+          .locator("#experience-grid .film-thumbnail-label")
+          .first()
+          .textContent(),
+        "Film preview unavailable",
+      );
+      assert.deepEqual(errors, []);
     } finally {
       await browser.close();
     }

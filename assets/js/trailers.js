@@ -136,18 +136,25 @@ class DestinationTrailer {
     video.src = clip.src;
     video.load();
   }
-  waitForFrame(video, timeout = 3000) {
-    if (video.readyState >= 2) return Promise.resolve(true);
+  waitForFrame(video, timeout = 8000) {
+    if (video.readyState >= 2 && !video.seeking) return Promise.resolve(true);
     if (video.error) return Promise.resolve(false);
     return new Promise((resolve) => {
       let timer;
-      const finish = () => {
+      const finish = (event) => {
+        if (event && !video.error && (video.readyState < 2 || video.seeking))
+          return;
         clearTimeout(timer);
         video.removeEventListener("loadeddata", finish);
+        video.removeEventListener("seeked", finish);
+        this.listeners.signal.removeEventListener("abort", cancel);
         video.removeEventListener("error", finish);
-        resolve(video.readyState >= 2);
+        resolve(video.readyState >= 2 && !video.seeking);
       };
+      const cancel = () => finish();
+      this.listeners.signal.addEventListener("abort", cancel, { once: true });
       video.addEventListener("loadeddata", finish);
+      video.addEventListener("seeked", finish);
       video.addEventListener("error", finish);
       timer = setTimeout(finish, timeout);
     });
@@ -208,6 +215,9 @@ class DestinationTrailer {
     const outgoing = this.current;
     const incoming = this.videos[1 - this.front];
     this.assign(incoming, this.clips[nextIndex]);
+    // Seek while hidden, then wait for the post-seek decoded frame.
+    // Seeking after revealing the buffer causes a visible empty-frame flash.
+    if (incoming.readyState >= 1) incoming.currentTime = 0;
     const ready = await this.waitForFrame(incoming);
     if (generation !== this.generation) return;
     if (!this.enabled) {
@@ -221,18 +231,19 @@ class DestinationTrailer {
       this.switching = false;
       return;
     }
-    incoming.currentTime = 0;
     this.front = 1 - this.front;
     this.clip = nextIndex;
     this.container.dataset.shot = String(nextIndex);
     incoming.classList.add("trailer-front");
+    outgoing.classList.add("trailer-underlay");
     outgoing.classList.remove("trailer-front");
     this.play(incoming);
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       outgoing.pause();
+      outgoing.classList.remove("trailer-underlay");
       this.switching = false;
-    }, 750);
+    }, 400);
     this.timers.add(timer);
   }
   retry() {
@@ -259,6 +270,7 @@ class DestinationTrailer {
       video.removeAttribute("poster");
       delete video.dataset.frameReady;
       video.load();
+      video.classList.remove("trailer-underlay");
       video.classList.toggle("trailer-front", index === 0);
     });
     this.container.removeAttribute("data-shot");

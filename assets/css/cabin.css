@@ -639,7 +639,7 @@ body.diving .window-glass-label {
 
 /* One shared rhythm for the landscape, route and destination copy. */
 .cabin-journey {
-  --scene-time: 1100ms;
+  --scene-time: 350ms;
   --scene-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 .cabin-outside .place-scene {
@@ -652,7 +652,7 @@ body.diving .window-glass-label {
   transition: left var(--scene-time) var(--scene-ease);
 }
 .cabin-stops > button {
-  transition: opacity 700ms ease;
+  transition: opacity 350ms ease;
 }
 .cabin-dive-button:disabled {
   cursor: progress;
@@ -670,7 +670,7 @@ body.diving .window-glass-label {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 700ms ease;
+  transition: opacity 350ms ease;
 }
 .trailer-shot.trailer-front {
   opacity: 1;
@@ -1222,4 +1222,40 @@ html.js-loading .site-loader {
     font-size: 10px;
     gap: 8px;
   }
+}
+
+/* Fade the new film OVER an opaque outgoing image. Fading both layers out/in
+   exposes the green glass background even when both videos are loaded. */
+.cabin-outside .place-scene.active {
+  z-index: 2;
+}
+.cabin-outside .place-scene.scene-underlay {
+  opacity: 1;
+  z-index: 1;
+  transition: none;
+}
+/* Keep shot stacking local so arrival copy and controls remain above it. */
+.arrival-trailer,
+.experience-film {
+  isolation: isolate;
+}
+.trailer-shot.trailer-front {
+  z-index: 2;
+}
+.trailer-shot.trailer-underlay {
+  opacity: 1;
+  z-index: 1;
+  transition: none;
+}
+.scene-load-status {
+  position: absolute;
+  left: 6%;
+  bottom: 100px;
+  max-width: 280px;
+  color: #e4e2cd;
+  font-size: 11px;
+  z-index: 6;
+}
+.scene-load-status:empty {
+  display: none;
 }

@@ -253,8 +253,8 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// One gesture chooses one stop. The visual change is a shared 1.1-second
-// dissolve: old footage keeps playing until the incoming scene has settled.
+// One gesture chooses one stop. The visual change is a quick 350ms
+// dissolve: old footage stays opaque until the incoming scene has settled.
 const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
 let scene = 0,
   paused = !(
@@ -366,9 +366,11 @@ function cancelSceneTransition() {
   sceneAnimations = [];
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
-  $$("#flight-portal [data-scene]").forEach((el, i) =>
-    el.classList.toggle("active", i === scene),
-  );
+  $$("#flight-portal [data-scene]").forEach((el, i) => {
+    el.classList.toggle("active", i === scene);
+    el.classList.remove("scene-underlay");
+  });
+  $("#scene-load-status").textContent = "";
   updateSceneText();
   setStop();
 }
@@ -378,7 +380,7 @@ async function selectScene(index, animate = true) {
     queuedScene = index;
     return;
   }
-  if (index === scene || !animate || motionPreference.matches) {
+  if (index === scene) {
     scene = index;
     cancelSceneTransition();
     syncMotion();
@@ -389,22 +391,43 @@ async function selectScene(index, animate = true) {
   const oldScene = scene;
   preparingScene = index;
   $("#take-dive").disabled = true;
-  // Request a decoded incoming frame before crossfading. Bounded wait: a broken
-  // CDN must never lock navigation; the neutral window and retry control remain (never a mismatched photo).
+  // Never let a readiness timeout reveal the green window background.
+  // Keep the current view if the next film cannot decode, with retry guidance.
   if (!paused) {
+    $("#scene-load-status").textContent = "Preparing the next experience…";
     syncMotion();
-    await Promise.race([homeTrailers[index].prepare(), delay(2200)]);
+    const ready = await homeTrailers[index].prepare();
+    if (version !== sceneVersion) return;
+    if (!ready) {
+      const next = queuedScene;
+      cancelSceneTransition();
+      $("#scene-load-status").textContent =
+        "Film unavailable. Keeping your current view — choose the experience again to retry.";
+      homeTrailers[index].unload();
+      syncMotion();
+      if (next !== null && next !== scene) selectScene(next);
+      return;
+    }
   }
+  $("#scene-load-status").textContent = "";
   if (version !== sceneVersion) return;
   scene = index;
   outgoingScene = oldScene;
   preparingScene = null;
   document.body.classList.add("scene-changing");
   setStop();
-  $$("#flight-portal [data-scene]").forEach((el, i) =>
-    el.classList.toggle("active", i === scene),
-  );
+  $$("#flight-portal [data-scene]").forEach((el, i) => {
+    el.classList.toggle("active", i === scene);
+    el.classList.toggle("scene-underlay", i === oldScene);
+  });
   syncMotion();
+  if (!animate || motionPreference.matches) {
+    const next = queuedScene;
+    cancelSceneTransition();
+    syncMotion();
+    if (next !== null && next !== scene) selectScene(next);
+    return;
+  }
   // Animate inner content, never the window label's positioning transform.
   const textNodes = $$(
     ".location-display, .location-meta, #window-glass-label > span:nth-child(2), #window-glass-label small, #dive-place",
@@ -415,10 +438,10 @@ async function selectScene(index, animate = true) {
         { opacity: 1, transform: "translateY(0px)" },
         { opacity: 0, transform: "translateY(-5px)" },
       ],
-      { duration: 200, easing: "ease-in", fill: "forwards" },
+      { duration: 100, easing: "ease-in", fill: "forwards" },
     ),
   );
-  await delay(200);
+  await delay(100);
   if (version !== sceneVersion) return;
   updateSceneText();
   sceneAnimations.forEach((animation) => animation.cancel());
@@ -428,15 +451,16 @@ async function selectScene(index, animate = true) {
         { opacity: 0, transform: "translateY(7px)" },
         { opacity: 1, transform: "translateY(0px)" },
       ],
-      { duration: 850, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
+      { duration: 250, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
     ),
   );
-  await delay(900);
+  await delay(300);
   if (version !== sceneVersion) return;
   sceneAnimations.forEach((animation) => animation.cancel());
   sceneAnimations = [];
   sceneBusy = false;
   outgoingScene = null;
+  $$(".scene-underlay").forEach((el) => el.classList.remove("scene-underlay"));
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
   syncMotion();
