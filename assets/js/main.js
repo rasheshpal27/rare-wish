@@ -1,7 +1,9 @@
 "use strict";
 const $ = (s, root = document) => root.querySelector(s),
   $$ = (s, root = document) => [...root.querySelectorAll(s)];
-const imagePath = (name) => `assets/img/${name}.webp`;
+const filmThumbnails = new FilmThumbnails();
+const thumbnailMarkup = (id) =>
+  `<video class="film-thumbnail" data-film-thumbnail="${EXPERIENCE_FILMS[id].clips[0].src}" muted playsinline preload="none" aria-hidden="true"></video><span class="film-thumbnail-label">Film preview</span>`;
 let activeCategory = "All",
   cardOffset = 0;
 const filteredExperiences = () =>
@@ -9,12 +11,13 @@ const filteredExperiences = () =>
     (e) => activeCategory === "All" || e.category === activeCategory,
   );
 function renderCards() {
+  filmThumbnails.release($("#experience-grid"));
   const e = filteredExperiences(),
     t = e.slice(cardOffset, cardOffset + 3);
   (($("#experience-grid").innerHTML = t
     .map(
       (i, n) =>
-        `<button class="experience-card enter" data-experience="${i.id}" style="animation-delay:${n * 70}ms" aria-label="Discover ${i.title}"><div class="experience-image"><img src="${imagePath(i.image)}" alt="${i.short}" width="700" height="850"/><span class="card-number">${String(experiences.indexOf(i) + 1).padStart(2, "0")} / A RARE EXPERIENCE</span><span class="card-category">${i.category.toUpperCase()}</span><span class="card-arrow">↗</span></div><div class="card-info"><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.short}</p></div></button>`,
+        `<button class="experience-card enter" data-experience="${i.id}" style="animation-delay:${n * 70}ms" aria-label="Discover ${i.title}"><div class="experience-image">${thumbnailMarkup(i.id)}<span class="card-number">${String(experiences.indexOf(i) + 1).padStart(2, "0")} / A RARE EXPERIENCE</span><span class="card-category">${i.category.toUpperCase()}</span><span class="card-arrow">↗</span></div><div class="card-info"><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.short}</p></div></button>`,
     )
     .join("")),
     ($("#collection-count").textContent =
@@ -24,6 +27,7 @@ function renderCards() {
   if (!e.length)
     $("#experience-grid").innerHTML =
       '<div class="no-results"><h3>A wish beyond the list?</h3><p>Choose another category, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>';
+  filmThumbnails.observe($("#experience-grid"));
 }
 $$("[data-filter]").forEach((e) =>
   e.addEventListener("click", () => {
@@ -89,8 +93,6 @@ function openExperience(e) {
   const t = experiences.find((i) => i.id === e);
   t &&
     ((selectedExperience = t),
-    ($("#detail-image").src = imagePath(t.image)),
-    ($("#detail-image").alt = `${t.location} — illustrative travel imagery`),
     ($("#detail-location").textContent =
       `${t.category.toUpperCase()} / ${t.location.toUpperCase()}`),
     ($("#detail-title").textContent = t.title),
@@ -99,7 +101,6 @@ function openExperience(e) {
   if (!t) return;
   releaseExperienceFilm();
   const film = EXPERIENCE_FILMS[t.id];
-  $("#detail-video").poster = imagePath(t.image);
   $("#detail-film-note").textContent = `ILLUSTRATIVE FILM · ${film.note}`;
   experienceTrailer = new DestinationTrailer($("#detail-trailer"), t.id, film);
   syncMotion();
@@ -112,6 +113,7 @@ document.addEventListener("click", (e) => {
 });
 let collectionCategory = "All";
 function renderCollection() {
+  filmThumbnails.release($("#collection-results"));
   const e = $("#experience-search").value.trim().toLowerCase(),
     t = experiences.filter(
       (i) =>
@@ -126,10 +128,11 @@ function renderCollection() {
       ? t
           .map(
             (i) =>
-              `<button class="result-card" data-experience="${i.id}"><div><img src="${imagePath(i.image)}" alt="" width="450" height="300"/><span class="result-arrow">↗</span></div><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.category}</p></button>`,
+              `<button class="result-card" data-experience="${i.id}"><div>${thumbnailMarkup(i.id)}<span class="result-arrow">↗</span></div><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.category}</p></button>`,
           )
           .join("")
       : '<div class="no-results"><h3>A wish beyond the list?</h3><p>Try another search, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>'));
+  filmThumbnails.observe($("#collection-results"));
 }
 function openCollection(e = "All") {
   ((collectionCategory = e),
@@ -219,8 +222,13 @@ $("#privacy-button").addEventListener("click", () =>
 $("#year").textContent = new Date().getFullYear();
 $('[name="date"]').min = new Date().toISOString().slice(0, 7);
 function updateHeader() {
+  document.body.classList.toggle(
+    "cabin-in-view",
+    !$("#home").hidden && scrollY < 60,
+  );
   const e =
     !location.hash.startsWith("#destination/") &&
+    !location.hash.startsWith("#experience/") &&
     scrollY < 60 &&
     $("#mobile-menu").hidden;
   ($("#header").classList.toggle("overlay-header", e),
@@ -245,8 +253,8 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// One gesture chooses one stop. The visual change is a shared 1.1-second
-// dissolve: old footage keeps playing until the incoming scene has settled.
+// One gesture chooses one stop. The visual change is a quick 350ms
+// dissolve: old footage stays opaque until the incoming scene has settled.
 const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
 let scene = 0,
   paused = !(
@@ -258,10 +266,24 @@ let wheelGesture = false,
   touchStart = null,
   activeDestination = null;
 let arrivalTrailer = null;
-const homeTrailers = $$("#flight-portal [data-scene]").map(
-  (container, index) =>
-    new DestinationTrailer(container, destinations[index].slug),
-);
+// Build lightweight stages only; inactive films do not hold network sources.
+$("#flight-portal").replaceChildren();
+$("#journey-select").replaceChildren();
+const homeTrailers = cabinExperiences.map((place, index) => {
+  const container = document.createElement("div");
+  container.className = `place-scene${index === 0 ? " active" : ""}`;
+  container.dataset.scene = String(index);
+  container.dataset.experienceId = place.slug;
+  const video = document.createElement("video");
+  video.setAttribute("aria-label", `${place.name} video preview`);
+  container.append(video);
+  $("#flight-portal").append(container);
+  const option = document.createElement("option");
+  option.value = String(index);
+  option.textContent = `${String(index + 1).padStart(2, "0")} · ${place.name}`;
+  $("#journey-select").append(option);
+  return new DestinationTrailer(container, place.slug, place.film);
+});
 let outgoingScene = null,
   preparingScene = null;
 let sceneBusy = false,
@@ -298,37 +320,43 @@ function syncMotion() {
   const allowed = visible && !$("dialog[open]");
   experienceTrailer?.setEnabled(visible && $("#experience-dialog").open);
   homeTrailers.forEach((trailer, index) => {
-    trailer.setEnabled(
-      allowed &&
-        !activeDestination &&
-        !diving &&
-        [scene, outgoingScene, preparingScene].includes(index),
-    );
+    const relevant =
+      !activeDestination &&
+      [scene, outgoingScene, preparingScene].includes(index);
+    if (!relevant) {
+      trailer.unload();
+      return;
+    }
+    // Decode the incoming opening frame while the outgoing film remains visible.
+    // Do not start the incoming film until its scene is actually revealed.
+    trailer.setEnabled(allowed && !diving && index !== preparingScene);
   });
   arrivalTrailer?.setEnabled(allowed && !!activeDestination);
+  filmThumbnails.sync(visible);
   updatePlaybackControls();
 }
 document.addEventListener("trailerstatechange", updatePlaybackControls);
 function updateSceneText() {
-  const place = destinations[scene];
-  $("#scene-number").textContent = `0${scene + 1}`;
+  const place = cabinExperiences[scene];
+  $("#scene-number").textContent = String(scene + 1).padStart(2, "0");
   $("#scene-name").textContent = place.name;
   $("#scene-region").textContent = place.region;
-  $("#scene-coordinates").textContent = place.coordinates;
+  $("#scene-coordinates").textContent =
+    `${place.category.toUpperCase()} · ${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length}`;
   $("#window-glass-destination").textContent = place.shortName;
-  $("#window-glass-label small").textContent = place.coordinates;
-  $("#dive-place").textContent = `EXPLORE ${place.name.toUpperCase()}`;
+  $("#window-glass-label small").textContent =
+    `${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length} · ${place.category.toUpperCase()}`;
+  $("#dive-place").textContent = `EXPLORE ${place.shortName.toUpperCase()}`;
 }
 function setStop() {
-  $$("[data-stop]").forEach((el) => {
-    const selected = Number(el.dataset.stop) === scene;
-    el.classList.toggle("active", selected);
-    el.setAttribute("aria-pressed", String(selected));
-    if (selected) el.setAttribute("aria-current", "step");
-    else el.removeAttribute("aria-current");
-  });
-  $("#flight-track-fill").style.width = `${scene * 50}%`;
-  $("#flight-track-plane").style.left = `${scene * 50}%`;
+  $("#journey-select").value = String(scene);
+  $("#journey-count").textContent =
+    `${String(scene + 1).padStart(2, "0")} / ${cabinExperiences.length} EXPERIENCES`;
+  $("#journey-prev").disabled = scene === 0;
+  $("#journey-next").disabled = scene === cabinExperiences.length - 1;
+  const progress = (scene / (cabinExperiences.length - 1)) * 100;
+  $("#flight-track-fill").style.width = `${progress}%`;
+  $("#flight-track-plane").style.left = `${progress}%`;
 }
 function cancelSceneTransition() {
   sceneVersion++;
@@ -338,19 +366,21 @@ function cancelSceneTransition() {
   sceneAnimations = [];
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
-  $$("#flight-portal [data-scene]").forEach((el, i) =>
-    el.classList.toggle("active", i === scene),
-  );
+  $$("#flight-portal [data-scene]").forEach((el, i) => {
+    el.classList.toggle("active", i === scene);
+    el.classList.remove("scene-underlay");
+  });
+  $("#scene-load-status").textContent = "";
   updateSceneText();
   setStop();
 }
 async function selectScene(index, animate = true) {
-  index = (index + destinations.length) % destinations.length;
+  index = Math.max(0, Math.min(cabinExperiences.length - 1, index));
   if (sceneBusy) {
     queuedScene = index;
     return;
   }
-  if (index === scene || !animate || motionPreference.matches) {
+  if (index === scene) {
     scene = index;
     cancelSceneTransition();
     syncMotion();
@@ -361,22 +391,43 @@ async function selectScene(index, animate = true) {
   const oldScene = scene;
   preparingScene = index;
   $("#take-dive").disabled = true;
-  // Request a decoded incoming frame before crossfading. Bounded wait: a broken
-  // CDN must never lock navigation; the static poster and retry control remain.
+  // Never let a readiness timeout reveal the green window background.
+  // Keep the current view if the next film cannot decode, with retry guidance.
   if (!paused) {
+    $("#scene-load-status").textContent = "Preparing the next experience…";
     syncMotion();
-    await Promise.race([homeTrailers[index].prepare(), delay(2200)]);
+    const ready = await homeTrailers[index].prepare();
+    if (version !== sceneVersion) return;
+    if (!ready) {
+      const next = queuedScene;
+      cancelSceneTransition();
+      $("#scene-load-status").textContent =
+        "Film unavailable. Keeping your current view — choose the experience again to retry.";
+      homeTrailers[index].unload();
+      syncMotion();
+      if (next !== null && next !== scene) selectScene(next);
+      return;
+    }
   }
+  $("#scene-load-status").textContent = "";
   if (version !== sceneVersion) return;
   scene = index;
   outgoingScene = oldScene;
   preparingScene = null;
   document.body.classList.add("scene-changing");
   setStop();
-  $$("#flight-portal [data-scene]").forEach((el, i) =>
-    el.classList.toggle("active", i === scene),
-  );
+  $$("#flight-portal [data-scene]").forEach((el, i) => {
+    el.classList.toggle("active", i === scene);
+    el.classList.toggle("scene-underlay", i === oldScene);
+  });
   syncMotion();
+  if (!animate || motionPreference.matches) {
+    const next = queuedScene;
+    cancelSceneTransition();
+    syncMotion();
+    if (next !== null && next !== scene) selectScene(next);
+    return;
+  }
   // Animate inner content, never the window label's positioning transform.
   const textNodes = $$(
     ".location-display, .location-meta, #window-glass-label > span:nth-child(2), #window-glass-label small, #dive-place",
@@ -387,10 +438,10 @@ async function selectScene(index, animate = true) {
         { opacity: 1, transform: "translateY(0px)" },
         { opacity: 0, transform: "translateY(-5px)" },
       ],
-      { duration: 200, easing: "ease-in", fill: "forwards" },
+      { duration: 100, easing: "ease-in", fill: "forwards" },
     ),
   );
-  await delay(200);
+  await delay(100);
   if (version !== sceneVersion) return;
   updateSceneText();
   sceneAnimations.forEach((animation) => animation.cancel());
@@ -400,15 +451,16 @@ async function selectScene(index, animate = true) {
         { opacity: 0, transform: "translateY(7px)" },
         { opacity: 1, transform: "translateY(0px)" },
       ],
-      { duration: 850, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
+      { duration: 250, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
     ),
   );
-  await delay(900);
+  await delay(300);
   if (version !== sceneVersion) return;
   sceneAnimations.forEach((animation) => animation.cancel());
   sceneAnimations = [];
   sceneBusy = false;
   outgoingScene = null;
+  $$(".scene-underlay").forEach((el) => el.classList.remove("scene-underlay"));
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
   syncMotion();
@@ -416,8 +468,13 @@ async function selectScene(index, animate = true) {
   queuedScene = null;
   if (next !== null && next !== scene) selectScene(next);
 }
-$$("[data-stop]").forEach((el) =>
-  el.addEventListener("click", () => selectScene(Number(el.dataset.stop))),
+$("#journey-select").addEventListener("change", (event) =>
+  selectScene(Number(event.target.value)),
+);
+$("#journey-prev").addEventListener("click", () => stepScene(-1));
+$("#journey-next").addEventListener("click", () => stepScene(1));
+$("#cabin-film-notes").addEventListener("click", () =>
+  openExperience(cabinExperiences[scene].slug),
 );
 $$("[data-motion-toggle]").forEach((button) =>
   button.addEventListener("click", () => {
@@ -460,13 +517,13 @@ function stepScene(direction) {
     queuedScene = Math.max(
       0,
       Math.min(
-        destinations.length - 1,
-        (preparingScene ?? queuedScene ?? scene) + direction,
+        cabinExperiences.length - 1,
+        (queuedScene ?? preparingScene ?? scene) + direction,
       ),
     );
     return;
   }
-  if (direction > 0 && scene === destinations.length - 1) {
+  if (direction > 0 && scene === cabinExperiences.length - 1) {
     location.hash = "experiences";
   } else if (direction < 0 && scene === 0) {
     // The first scene is the beginning, not an implicit wraparound.
@@ -477,6 +534,7 @@ $("#hero").addEventListener(
   (event) => {
     if (
       !canChangeScene() ||
+      event.target.closest(".cabin-stops") ||
       event.ctrlKey ||
       Math.abs(event.deltaY) < Math.abs(event.deltaX) ||
       !event.deltaY
@@ -500,7 +558,8 @@ $("#hero").addEventListener(
   "touchstart",
   (event) => {
     touchStart =
-      event.touches.length === 1
+      event.touches.length === 1 &&
+      !event.target.closest("button,a,select,label")
         ? { x: event.touches[0].clientX, y: event.touches[0].clientY }
         : null;
   },
@@ -559,18 +618,28 @@ function renderDestination(place) {
   $("#home").hidden = true;
   $("#destination-page").hidden = false;
   document.body.classList.add("destination-mode");
+  document.body.classList.remove("cabin-in-view");
   document.title = `${place.name} — A Rare Wish`;
   arrivalTrailer?.destroy();
-  const video = $("#arrival-video");
-  video.poster = imagePath(place.images[0]);
-  arrivalTrailer = new DestinationTrailer($("#arrival-trailer"), place.slug);
+  arrivalTrailer = new DestinationTrailer(
+    $("#arrival-trailer"),
+    place.slug,
+    place.film || TRAILERS[place.slug],
+  );
   $("#arrival-region").textContent = place.region;
   $("#arrival-title").textContent = place.name;
   $("#arrival-intro").textContent = place.intro;
+  $("#arrival-film-note").textContent = place.film
+    ? `ILLUSTRATIVE FILM · ${place.film.note}`
+    : "Illustrative destination footage. See Film credits for source and location details.";
   $("#place-heading").innerHTML = place.title;
   $("#place-description").textContent = place.description;
-  $("#place-image").src = imagePath(place.images[1]);
-  $("#place-image").alt = `${place.name} — illustrative experience imagery`;
+  filmThumbnails.release($("#place-preview"));
+  const preview = $("#place-preview video");
+  preview.dataset.filmThumbnail = (
+    place.film || TRAILERS[place.slug]
+  ).clips[0].src;
+  filmThumbnails.observe($("#place-preview"));
   $("#place-enquire").dataset.enquire = place.wish;
   $("#place-highlights").innerHTML = place.highlights
     .map(
@@ -591,6 +660,16 @@ function route() {
   cancelDive();
   cancelSceneTransition();
   const hash = location.hash.slice(1);
+  if (hash.startsWith("experience/")) {
+    const place = cabinExperiences.find((item) => item.slug === hash.slice(11));
+    if (place) {
+      scene = cabinExperiences.indexOf(place);
+      cancelSceneTransition();
+      renderDestination(place);
+      return;
+    }
+    history.replaceState(null, "", "#home");
+  }
   if (hash.startsWith("destination/")) {
     const place = destinations.find((item) => item.slug === hash.slice(12));
     if (place) {
@@ -641,9 +720,9 @@ function cancelDive() {
 }
 $("#take-dive").addEventListener("click", () => {
   if (diving || sceneBusy) return;
-  const place = destinations[scene];
+  const place = cabinExperiences[scene];
   if (motionPreference.matches) {
-    location.hash = `destination/${place.slug}`;
+    location.hash = `experience/${place.slug}`;
     return;
   }
   diving = true;
@@ -699,7 +778,7 @@ $("#take-dive").addEventListener("click", () => {
     { duration: 1750, fill: "forwards" },
   );
   diveTimer = setTimeout(() => {
-    location.hash = `destination/${place.slug}`;
+    location.hash = `experience/${place.slug}`;
   }, 1750);
 });
 document.addEventListener("keydown", (event) => {

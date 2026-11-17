@@ -315,3 +315,59 @@ const destinations = [
     ],
   },
 ];
+
+// The cabin follows the complete experience collection, with Antarctica first.
+// Destination routes above remain available for existing links.
+const cabinNames = {
+  antarctica: "Antarctica",
+  kenya: "Kenya safari",
+  underwater: "Beneath the waves",
+  kumbh: "Mahakumbh",
+  picnic: "Helicopter picnic",
+  wedding: "An extraordinary arrival",
+  ponies: "Beach rides",
+  gorillas: "Gorilla encounters",
+  ice: "ICE Moritz",
+  vatican: "Vatican after hours",
+  samurai: "Samurai heritage",
+  palau: "Dive into history",
+  porsche: "Porsche on ice",
+  diamond: "The diamond story",
+  piaget: "Infinitely personal",
+  island: "Your private island",
+  survival: "Into the wild",
+  wellness: "Wellness & golf",
+  space: "Beyond Earth",
+  polo: "The art of polo",
+  horseback: "Horseback safari",
+  earth: "Inside the earth",
+};
+const cabinExperiences = [
+  experiences.find((experience) => experience.id === "antarctica"),
+  ...experiences.filter((experience) => experience.id !== "antarctica"),
+].map((experience) => ({
+  slug: experience.id,
+  name: experience.title,
+  shortName: cabinNames[experience.id],
+  region: experience.location,
+  category: experience.category,
+  images: [experience.image, experience.image],
+  wish: experience.title,
+  intro: experience.short,
+  title: experience.short,
+  description: experience.description,
+  film: EXPERIENCE_FILMS[experience.id],
+  highlights: [
+    experience.location,
+    experience.category,
+    "Personally curated for you",
+  ],
+  facts: [
+    ["YOUR WISH", experience.short],
+    [
+      "THE DETAILS",
+      "Dates, access, activities and inclusions are confirmed individually in your personal proposal.",
+    ],
+    ["THE FILM", EXPERIENCE_FILMS[experience.id].note],
+  ],
+}));

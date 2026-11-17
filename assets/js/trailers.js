@@ -64,6 +64,8 @@ class DestinationTrailer {
     this.videos = [first, second];
     this.videos.forEach((video, i) => {
       video.removeAttribute("src");
+      video.removeAttribute("poster");
+      delete video.dataset.frameReady;
       video.replaceChildren();
       video.removeAttribute("autoplay"); // Enabled explicitly; inactive scenes never autoplay.
       video.loop = this.clips.length === 1;
@@ -78,6 +80,9 @@ class DestinationTrailer {
       video.classList.add("trailer-shot");
       video.classList.toggle("trailer-front", i === 0);
       listen("loadedmetadata", () => CabinViewport.frame(video));
+      listen("loadeddata", () => {
+        video.dataset.frameReady = "true";
+      });
       listen("playing", () => {
         if (!this.enabled) {
           video.pause();
@@ -120,28 +125,36 @@ class DestinationTrailer {
   }
   assign(video, clip) {
     // Optional focal point per shot. Defaults keep the center of the original
-    // composition visible through the main window, including its poster.
+    // composition visible through the main window, including its decoded opening frame.
     video.style.objectFit = clip.fit || "cover";
     video.dataset.windowFocusX = String(clip.windowFocus?.x ?? 0.5);
     video.dataset.windowFocusY = String(clip.windowFocus?.y ?? 0.5);
     CabinViewport.frame(video);
     if (video.getAttribute("src") === clip.src) return;
+    delete video.dataset.frameReady;
     video.preload = "auto";
     video.src = clip.src;
     video.load();
   }
-  waitForFrame(video, timeout = 3000) {
-    if (video.readyState >= 2) return Promise.resolve(true);
+  waitForFrame(video, timeout = 8000) {
+    if (video.readyState >= 2 && !video.seeking) return Promise.resolve(true);
     if (video.error) return Promise.resolve(false);
     return new Promise((resolve) => {
       let timer;
-      const finish = () => {
+      const finish = (event) => {
+        if (event && !video.error && (video.readyState < 2 || video.seeking))
+          return;
         clearTimeout(timer);
         video.removeEventListener("loadeddata", finish);
+        video.removeEventListener("seeked", finish);
+        this.listeners.signal.removeEventListener("abort", cancel);
         video.removeEventListener("error", finish);
-        resolve(video.readyState >= 2);
+        resolve(video.readyState >= 2 && !video.seeking);
       };
+      const cancel = () => finish();
+      this.listeners.signal.addEventListener("abort", cancel, { once: true });
       video.addEventListener("loadeddata", finish);
+      video.addEventListener("seeked", finish);
       video.addEventListener("error", finish);
       timer = setTimeout(finish, timeout);
     });
@@ -202,6 +215,9 @@ class DestinationTrailer {
     const outgoing = this.current;
     const incoming = this.videos[1 - this.front];
     this.assign(incoming, this.clips[nextIndex]);
+    // Seek while hidden, then wait for the post-seek decoded frame.
+    // Seeking after revealing the buffer causes a visible empty-frame flash.
+    if (incoming.readyState >= 1) incoming.currentTime = 0;
     const ready = await this.waitForFrame(incoming);
     if (generation !== this.generation) return;
     if (!this.enabled) {
@@ -215,24 +231,50 @@ class DestinationTrailer {
       this.switching = false;
       return;
     }
-    incoming.currentTime = 0;
     this.front = 1 - this.front;
     this.clip = nextIndex;
     this.container.dataset.shot = String(nextIndex);
     incoming.classList.add("trailer-front");
+    outgoing.classList.add("trailer-underlay");
     outgoing.classList.remove("trailer-front");
     this.play(incoming);
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       outgoing.pause();
+      outgoing.classList.remove("trailer-underlay");
       this.switching = false;
-    }, 750);
+    }, 400);
     this.timers.add(timer);
   }
   retry() {
     this.current.load();
     this.setState("loading");
     this.setEnabled(true);
+  }
+  unload() {
+    this.enabled = false;
+    if (
+      !this.videos.some(
+        (video) => video.hasAttribute("src") || video.hasAttribute("poster"),
+      )
+    )
+      return;
+    this.generation++;
+    this.timers.forEach(clearTimeout);
+    this.timers.clear();
+    this.switching = false;
+    this.front = this.clip = 0;
+    this.videos.forEach((video, index) => {
+      video.pause();
+      video.removeAttribute("src");
+      video.removeAttribute("poster");
+      delete video.dataset.frameReady;
+      video.load();
+      video.classList.remove("trailer-underlay");
+      video.classList.toggle("trailer-front", index === 0);
+    });
+    this.container.removeAttribute("data-shot");
+    this.setState("idle");
   }
   destroy() {
     this.enabled = false;

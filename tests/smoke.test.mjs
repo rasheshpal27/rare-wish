@@ -24,9 +24,36 @@ const base = process.env.TEST_BASE_URL || "http://127.0.0.1:8080";
 const fixture = await readFile(
   new URL("./fixtures/playback.mp4", import.meta.url),
 );
+async function fulfillMedia(route, body) {
+  const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range || "");
+  if (!range)
+    return route.fulfill({
+      status: 200,
+      contentType: "video/mp4",
+      headers: {
+        "accept-ranges": "bytes",
+        "content-length": String(body.length),
+      },
+      body,
+    });
+  const start = Number(range[1]),
+    end = range[2]
+      ? Math.min(Number(range[2]), body.length - 1)
+      : body.length - 1;
+  return route.fulfill({
+    status: 206,
+    contentType: "video/mp4",
+    headers: {
+      "accept-ranges": "bytes",
+      "content-range": `bytes ${start}-${end}/${body.length}`,
+      "content-length": String(end - start + 1),
+    },
+    body: body.subarray(start, end + 1),
+  });
+}
 async function stubFootage(page) {
   await page.route("https://videos.pexels.com/**", (route) =>
-    route.fulfill({ status: 200, contentType: "video/mp4", body: fixture }),
+    fulfillMedia(route, fixture),
   );
 }
 async function enter(page, url) {
@@ -95,7 +122,7 @@ test(
 
       assert.equal(
         await page.locator("#scene-name").textContent(),
-        "The Maldives",
+        "Explore Antarctica",
       );
       assert.equal(
         await page.locator("#takeoff-movie, .movie-plane").count(),
@@ -118,7 +145,10 @@ test(
           );
       });
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.waitForTimeout(230);
       await settled(page);
       await page.mouse.move(450, 450);
@@ -127,12 +157,15 @@ test(
       await settled(page);
       assert.equal(
         await page.locator("#scene-name").textContent(),
-        "Antarctica",
+        "Sleep underwater",
       );
       await page.mouse.wheel(0, -90);
       await page.waitForTimeout(230);
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
 
       // Window expansion is visible, Escape cancels, next activation arrives.
       await page.locator("#take-dive").click();
@@ -149,15 +182,21 @@ test(
       await page.keyboard.press("Escape");
       assert.equal(await page.locator("#dive-overlay").isVisible(), false);
       await page.locator("#take-dive").click();
-      await page.waitForURL("**/#destination/kenya");
+      await page.waitForURL("**/#experience/kenya");
       await page.locator("#arrival-title").waitFor();
-      assert.equal(await page.locator("#arrival-title").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.reload();
       await page.locator("#skip-intro").click();
       await page.waitForFunction(
         () => !document.documentElement.classList.contains("js-loading"),
       );
-      assert.equal(await page.locator("#arrival-title").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.locator(".arrival-copy a").click();
       assert.equal(await page.locator("#destination-page").isVisible(), true);
       await page.locator("#place-enquire").click();
@@ -167,7 +206,7 @@ test(
       );
       await page.locator("#enquiry-dialog .close-dialog").click();
       await enter(page, `${base}/#home`);
-      await page.locator('[data-stop="2"]').click();
+      await page.locator("#journey-select").selectOption("21");
       await settled(page);
       await page.locator("#hero").evaluate((hero) =>
         hero.dispatchEvent(
@@ -228,7 +267,7 @@ test(
       );
       await page.locator("#motion-toggle").click();
       await page.waitForFunction(() => !homeTrailers[0].current.paused);
-      await page.locator('[data-stop="1"]').click();
+      await page.locator("#journey-select").selectOption("1");
       await settled(page);
       assert.equal(
         await page.evaluate(() =>
@@ -255,9 +294,9 @@ test(
         true,
       );
       await page.locator("#take-dive").click();
-      await page.waitForURL("**/#destination/maldives");
+      await page.waitForURL("**/#experience/antarctica");
       await page.waitForFunction(
-        () => activeDestination?.slug === "maldives" && arrivalTrailer,
+        () => activeDestination?.slug === "antarctica" && arrivalTrailer,
       );
       assert.equal(await page.locator("#dive-overlay").isVisible(), false);
       assert.equal(
@@ -292,7 +331,10 @@ test(
         hero.dispatchEvent(end);
       });
       await settled(page);
-      assert.equal(await page.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Kenya Wildlife Safari",
+      );
       await page.locator("#menu-button").click();
       assert.equal(await page.locator("#mobile-menu").isVisible(), true);
       await page.locator("#mobile-menu a").first().click();
@@ -353,11 +395,18 @@ test(
         await broken.locator("#motion-toggle").textContent(),
         /Retry/,
       );
-      await broken.locator('[data-stop="1"]').click();
+      await broken.locator("#journey-select").selectOption("1");
       await settled(broken);
-      assert.equal(await broken.locator("#scene-name").textContent(), "Kenya");
+      assert.equal(
+        await broken.locator("#scene-name").textContent(),
+        "Explore Antarctica",
+      );
+      assert.match(
+        await broken.locator("#scene-load-status").textContent(),
+        /Keeping your current view/,
+      );
       await stubFootage(broken);
-      await broken.locator("#motion-toggle").click();
+      await broken.locator("#journey-select").selectOption("1");
       await broken.waitForFunction(
         () =>
           !homeTrailers[1].current.paused &&
@@ -422,14 +471,14 @@ test(
       );
 
       // A newer button request wins; navigating away cancels all pending changes.
-      await broken.locator('[data-stop="0"]').click();
-      await broken.locator('[data-stop="2"]').click();
+      await broken.locator("#journey-select").selectOption("0");
+      await broken.locator("#journey-select").selectOption("2");
       await broken.waitForFunction(() => !sceneBusy && scene === 2);
       assert.equal(
         await broken.locator("#scene-name").textContent(),
-        "Antarctica",
+        "Sleep underwater",
       );
-      await broken.locator('[data-stop="1"]').click();
+      await broken.locator("#journey-select").selectOption("1");
       await broken.evaluate(() => {
         location.hash = "experiences";
       });
@@ -521,7 +570,7 @@ test(
       }
       await page.evaluate(() =>
         homeTrailers[0].assign(homeTrailers[0].current, {
-          ...TRAILERS.maldives.clips[0],
+          ...TRAILERS.antarctica.clips[0],
           windowFocus: { x: 0.35, y: 0.45 },
         }),
       );
@@ -625,7 +674,7 @@ test(
           .evaluate((video) => parseFloat(video.style.width) > 0),
         true,
       );
-      await page.waitForURL("**/#destination/maldives");
+      await page.waitForURL("**/#experience/antarctica");
       await page.waitForFunction(() => arrivalTrailer?.current.readyState >= 2);
       assert.equal(
         await page
@@ -866,6 +915,542 @@ test(
       await stubFootage(broken);
       await broken.locator("#detail-motion-toggle").click();
       await broken.waitForFunction(() => experienceTrailer.state === "playing");
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "all 22 cabin films start in Antarctica, stay lazy, and dive into matching experiences",
+  { timeout: 120000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: "reduce",
+      });
+      const requests = [],
+        errors = [];
+      page.on("request", (request) => {
+        if (request.url().includes("videos.pexels.com"))
+          requests.push(request.url());
+      });
+      page.on("pageerror", (error) => errors.push(error.message));
+      await stubFootage(page);
+      await page.goto(base);
+      assert.equal(requests.length, 0);
+      assert.equal(
+        await page.locator("#scene-name").textContent(),
+        "Explore Antarctica",
+      );
+      assert.equal(await page.locator("#journey-select option").count(), 22);
+      assert.equal(
+        await page.locator("#flight-portal [data-scene]").count(),
+        22,
+      );
+      await page.locator("#intro-video").check();
+      await page.locator("#skip-intro").click();
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(
+        requests.length,
+        2,
+        "only the opening Antarctic shots are requested",
+      );
+      assert.equal(await page.locator("#journey-prev").isDisabled(), true);
+      assert.deepEqual(
+        await page.evaluate(() => cabinExperiences.map((p) => p.slug).sort()),
+        await page.evaluate(() => experiences.map((p) => p.id).sort()),
+      );
+      const stops = await page.evaluate(() =>
+        cabinExperiences.map((p) => ({
+          id: p.slug,
+          title: p.name,
+          clips: p.film.clips.map((c) => c.src),
+        })),
+      );
+      for (const [index, stop] of stops.entries()) {
+        await page.locator("#journey-select").selectOption(String(index));
+        await page.waitForFunction(
+          (index) => homeTrailers[index].state === "playing",
+          index,
+        );
+        assert.equal(
+          await page.locator("#scene-name").textContent(),
+          stop.title,
+        );
+        assert.equal(
+          await page.locator("#scene-number").textContent(),
+          String(index + 1).padStart(2, "0"),
+        );
+        assert.deepEqual(
+          await page.evaluate(
+            (index) => homeTrailers[index].clips.map((c) => c.src),
+            index,
+          ),
+          stop.clips,
+        );
+        assert.equal(
+          await page.evaluate(
+            (index) =>
+              homeTrailers.every(
+                (p, i) =>
+                  i === index || p.videos.every((v) => !v.hasAttribute("src")),
+              ),
+            index,
+          ),
+          true,
+        );
+        assert.ok(
+          Math.abs(
+            (await page
+              .locator("#flight-track-fill")
+              .evaluate((e) => parseFloat(e.style.width))) -
+              (index / 21) * 100,
+          ) < 0.001,
+        );
+        await page.locator("#take-dive").click();
+        await page.waitForURL(`**/#experience/${stop.id}`);
+        await page.waitForFunction(
+          (id) =>
+            activeDestination?.slug === id &&
+            arrivalTrailer?.state === "playing",
+          stop.id,
+        );
+        assert.equal(
+          await page.locator("#arrival-title").textContent(),
+          stop.title,
+        );
+        assert.deepEqual(
+          await page.evaluate(() => arrivalTrailer.clips.map((c) => c.src)),
+          stop.clips,
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            homeTrailers.every((p) =>
+              p.videos.every((v) => !v.hasAttribute("src")),
+            ),
+          ),
+          true,
+        );
+        assert.equal(
+          await page.locator("#place-enquire").getAttribute("data-enquire"),
+          stop.title,
+        );
+        assert.match(
+          await page.locator("#arrival-film-note").textContent(),
+          /ILLUSTRATIVE FILM/,
+        );
+        await page.locator(".arrival-back").click();
+        await page.waitForURL("**/#home");
+        await page.waitForFunction(() => !activeDestination);
+        assert.equal(
+          await page.locator("#journey-select").inputValue(),
+          String(index),
+        );
+      }
+      assert.equal(await page.locator("#journey-next").isDisabled(), true);
+      await page.locator("#hero").evaluate((hero) =>
+        hero.dispatchEvent(
+          new WheelEvent("wheel", {
+            deltaY: 100,
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+      );
+      await page.waitForURL("**/#experiences");
+
+      // New deep links survive reload; old destination links still resolve.
+      await enter(page, `${base}/#experience/polo`);
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Learn polo like the kings",
+      );
+      await page.reload();
+      await page.locator("#skip-intro").click();
+      await page.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "Learn polo like the kings",
+      );
+      await enter(page, `${base}/#destination/maldives`);
+      assert.equal(
+        await page.locator("#arrival-title").textContent(),
+        "The Maldives",
+      );
+
+      // Long labels fit narrow layouts; film notes remain accessible from the cabin.
+      await page.setViewportSize({ width: 320, height: 667 });
+      await enter(page, `${base}/#home`);
+      await page.locator("#journey-select").selectOption("21");
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+      );
+      const picker = await page.locator(".cabin-stops").boundingBox();
+      const dive = await page.locator("#take-dive").boundingBox();
+      const music = await page.locator(".music-control").boundingBox();
+      assert.ok(
+        picker.y >= dive.y + dive.height && picker.y + picker.height <= 667,
+      );
+      assert.ok(
+        music.y + music.height < picker.y,
+        "music never covers the picker or next arrow",
+      );
+      await page.locator("#cabin-film-notes").click();
+      assert.equal(
+        await page.locator("#detail-title").textContent(),
+        "Journey to the centre of the earth",
+      );
+      await page.keyboard.press("Escape");
+      await page.locator("#take-dive").click();
+      await page.waitForURL("**/#experience/earth");
+      await page.locator("#arrival-title").waitFor({ state: "visible" });
+      const title = await page.locator("#arrival-title").boundingBox();
+      assert.ok(title.y >= 70 && title.x + title.width <= 320);
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "native film previews, distinct films, unchanged mobile crop, restored music and WhatsApp focus",
+  { timeout: 90000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+      });
+      await stubFootage(page);
+      await page.addInitScript(() => {
+        window.testFrequencies = [];
+        const original = AudioContext.prototype.createOscillator;
+        AudioContext.prototype.createOscillator = function () {
+          const oscillator = original.call(this),
+            start = oscillator.start.bind(oscillator);
+          oscillator.start = (...args) => {
+            window.testFrequencies.push(oscillator.frequency.value);
+            start(...args);
+          };
+          return oscillator;
+        };
+      });
+      await page.goto(base);
+      await page.locator("#enter-with-music").click();
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(await page.locator("video[poster]").count(), 0);
+      assert.equal(
+        await page
+          .locator("#detail-image, #place-image, .experience-card img")
+          .count(),
+        0,
+      );
+      const style = await page.locator("#window-glass-label").evaluate((el) => {
+        const css = getComputedStyle(el);
+        return {
+          background: css.backgroundImage,
+          color: css.backgroundColor,
+          border: css.borderTopWidth,
+          shadow: css.boxShadow,
+        };
+      });
+      assert.deepEqual(style, {
+        background: "none",
+        color: "rgba(0, 0, 0, 0)",
+        border: "0px",
+        shadow: "none",
+      });
+      const frequencies = await page.evaluate(() => testFrequencies);
+      assert.ok(frequencies.length >= 3);
+      assert.ok(
+        frequencies.every((f) => f >= 146 && f <= 441),
+        "original sustained ambient register restored",
+      );
+      assert.notEqual(
+        await page.evaluate(() => EXPERIENCE_FILMS.diamond.clips[0].src),
+        await page.evaluate(() => EXPERIENCE_FILMS.piaget.clips[0].src),
+      );
+      assert.match(
+        await page.evaluate(() => EXPERIENCE_FILMS.ponies.clips[0].src),
+        /14915401/,
+      );
+
+      // Preparation decodes the opening frame without playing it behind another scene.
+      await page.evaluate(async () => {
+        await homeTrailers[7].prepare();
+      });
+      assert.equal(
+        await page.evaluate(() => homeTrailers[7].current.paused),
+        true,
+      );
+      assert.ok(
+        await page.evaluate(
+          () =>
+            homeTrailers[7].current.currentTime < 0.1 &&
+            homeTrailers[7].current.readyState >= 2,
+        ),
+      );
+      await page.evaluate(() => homeTrailers[7].unload());
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(100);
+      const framing = await page.evaluate(() => {
+        const stage = document.querySelector("#cabin-view"),
+          g = CabinViewport.geometry(stage);
+        const scale = Math.max(
+          stage.clientWidth / 1376,
+          stage.clientHeight / 768,
+        );
+        const offset = (stage.clientWidth - 1376 * scale) * 0.68;
+        return {
+          right: g.bounds.right,
+          viewport: stage.clientWidth,
+          width: parseFloat(homeTrailers[0].current.style.width),
+          oldRightOverscan: (1376 * scale + offset - g.x + 2) * 2,
+        };
+      });
+      assert.ok(framing.right <= framing.viewport);
+      assert.ok(
+        framing.width < framing.oldRightOverscan,
+        "off-screen second window no longer enlarges the primary subject",
+      );
+      const contact = page.locator(".header .whatsapp-primary");
+      assert.equal(
+        await contact.getAttribute("href"),
+        "https://wa.me/919769825919",
+      );
+      assert.equal(await contact.getAttribute("target"), "_blank");
+      await page.keyboard.press("Tab");
+      await contact.focus();
+      assert.equal(
+        await contact.evaluate((el) => getComputedStyle(el).outlineStyle),
+        "solid",
+      );
+
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.evaluate(() => openCollection());
+      await page.locator("#experience-search").fill("Piaget");
+      const thumb = page.locator("#collection-results video");
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#collection-results video")?.dataset.ready ===
+          "true",
+      );
+      assert.equal(await thumb.evaluate((v) => v.paused), true);
+      assert.ok(await thumb.evaluate((v) => v.currentTime < 0.1));
+      assert.match(await thumb.getAttribute("src"), /6262806/);
+      assert.equal(await page.locator("#collection-results img").count(), 0);
+      await page.locator("#experience-search").fill("Diamond");
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#collection-results video")?.dataset.ready ===
+          "true",
+      );
+      assert.match(await thumb.getAttribute("src"), /4004214/);
+      await page.locator("#collection-dialog .close-dialog").click();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#collection-results video")].every(
+          (v) => !v.hasAttribute("src"),
+        ),
+      );
+
+      // Disabling video also prevents the new thumbnail system from fetching clips.
+      const silent = await browser.newPage();
+      const requests = [];
+      await stubFootage(silent);
+      silent.on("request", (request) => {
+        if (request.url().includes("videos.pexels.com"))
+          requests.push(request.url());
+      });
+      await silent.goto(base);
+      await silent.locator("#intro-video").uncheck();
+      await silent.locator("#skip-intro").click();
+      await silent.waitForFunction(
+        () => !document.documentElement.classList.contains("js-loading"),
+      );
+      await silent.evaluate(() => openCollection());
+      await silent.waitForTimeout(300);
+      assert.equal(requests.length, 0);
+      assert.equal(await silent.locator("video[poster]").count(), 0);
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test(
+  "quick opaque dissolves, slow-media retention and non-black thumbnails without reframing",
+  { timeout: 90000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath,
+      args: Chromium.args.filter((arg) => arg !== "--single-process"),
+      env,
+      headless: true,
+    });
+    try {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 900 },
+      });
+      const errors = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await stubFootage(page);
+      await enter(page, base);
+      await page.waitForFunction(() => homeTrailers[0].state === "playing");
+      assert.equal(
+        await page.locator(".window-composite").count(),
+        0,
+        "no canvas framing or blur reintroduced",
+      );
+      assert.equal(
+        await page.locator("#wild-story").count(),
+        1,
+        "Kenya page section untouched",
+      );
+      const nextURL = await page.evaluate(() => homeTrailers[1].clips[0].src);
+      let release;
+      const gate = new Promise((resolve) => {
+        release = resolve;
+      });
+      await page.route(nextURL, async (route) => {
+        await gate;
+        await fulfillMedia(route, fixture);
+      });
+      await page.locator("#journey-select").selectOption("1");
+      await page.waitForTimeout(2600);
+      assert.equal(
+        await page.evaluate(() => scene),
+        0,
+        "no timeout-driven cut to green",
+      );
+      assert.equal(
+        await page
+          .locator('[data-scene="0"]')
+          .evaluate((el) => getComputedStyle(el).opacity),
+        "1",
+      );
+      // Record intermediate computed styles in the page, not through slow IPC polling.
+      await page.evaluate(() => {
+        window.blendSamples = [];
+        const sample = () => {
+          const old = document.querySelector('[data-scene="0"]');
+          if (scene === 1 && sceneBusy) {
+            blendSamples.push({
+              oldOpacity: getComputedStyle(old).opacity,
+              ready: homeTrailers[1].current.readyState,
+              seeking: homeTrailers[1].current.seeking,
+              duration: getComputedStyle(
+                document.querySelector('[data-scene="1"]'),
+              ).transitionDuration,
+            });
+          }
+          if (sceneBusy) requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+      release();
+      await settled(page);
+      assert.equal(await page.evaluate(() => scene), 1);
+      const samples = await page.evaluate(() => blendSamples);
+      assert.ok(samples.length > 0);
+      assert.ok(
+        samples.every(
+          (s) =>
+            s.oldOpacity === "1" &&
+            s.ready >= 2 &&
+            !s.seeking &&
+            s.duration === "0.35s",
+        ),
+      );
+      assert.equal(await page.locator(".scene-underlay").count(), 0);
+      await page.evaluate(async () => {
+        await homeTrailers[1].next();
+      });
+      assert.equal(
+        await page
+          .locator('[data-scene="1"] .trailer-underlay')
+          .evaluate((el) => getComputedStyle(el).opacity),
+        "1",
+      );
+      await page.waitForFunction(() => !homeTrailers[1].switching);
+      assert.equal(await page.locator(".trailer-underlay").count(), 0);
+
+      const blackOpening = await readFile(
+        new URL("./fixtures/black-opening.mp4", import.meta.url),
+      );
+      const blackOnly = await readFile(
+        new URL("./fixtures/black-only.mp4", import.meta.url),
+      );
+      await page.route("https://videos.pexels.com/**", (route) =>
+        fulfillMedia(route, blackOpening),
+      );
+      await page.evaluate(() => {
+        location.hash = "experiences";
+      });
+      await page.locator("#experience-grid").scrollIntoViewIfNeeded();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#experience-grid video")].every(
+          (v) => v.dataset.ready === "true",
+        ),
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#experience-grid video")].every(
+            (v) => v.paused && v.currentTime >= 1 && FilmFrames.inspect(v),
+          ),
+        ),
+        true,
+        "thumbnails skip a genuinely black opening second",
+      );
+      // Clear sources to test entirely black content with the same visible cards.
+      await page.route("https://videos.pexels.com/**", (route) =>
+        fulfillMedia(route, blackOnly),
+      );
+      await page.evaluate(() => {
+        const grid = document.querySelector("#experience-grid");
+        filmThumbnails.release(grid);
+        filmThumbnails.observe(grid);
+      });
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("#experience-grid video")].every(
+          (v) => v.dataset.ready === "false",
+        ),
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#experience-grid video")].every(
+            (v) => getComputedStyle(v).opacity === "0",
+          ),
+        ),
+        true,
+      );
+      assert.equal(
+        await page
+          .locator("#experience-grid .film-thumbnail-label")
+          .first()
+          .textContent(),
+        "Film preview unavailable",
+      );
+      assert.deepEqual(errors, []);
     } finally {
       await browser.close();
     }

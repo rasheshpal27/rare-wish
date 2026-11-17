@@ -24,13 +24,13 @@ const CabinViewport = {
       width: this.primary.width * scale,
       height: this.primary.height * scale,
       bottom: this.primary.bottom * scale + offsetY,
-      // Include both physical apertures, even when the second is off screen.
-      // This keeps the panorama's scale consistent as the viewport resizes.
+      // Cover only visible glass. An off-screen second aperture must not
+      // magnify the subject in the primary window on phones.
       bounds: {
-        left: this.apertures.left * scale + offsetX,
-        right: this.apertures.right * scale + offsetX,
-        top: this.apertures.top * scale + offsetY,
-        bottom: this.apertures.bottom * scale + offsetY,
+        left: Math.max(0, this.apertures.left * scale + offsetX),
+        right: Math.min(width, this.apertures.right * scale + offsetX),
+        top: Math.max(0, this.apertures.top * scale + offsetY),
+        bottom: Math.min(height, this.apertures.bottom * scale + offsetY),
       },
     };
   },

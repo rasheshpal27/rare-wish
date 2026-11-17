@@ -43,12 +43,20 @@ const EXPERIENCE_FOOTAGE = {
     seconds: 4,
   },
   beachRide: {
-    src: "https://videos.pexels.com/video-files/856643/856643-hd_1920_1080_30fps.mp4",
+    src: "https://videos.pexels.com/video-files/14915401/14915401-hd_1920_1080_30fps.mp4",
     source:
-      "https://www.pexels.com/video/horseback-riding-at-the-beach-856643/",
-    creator: "Pixabay",
+      "https://www.pexels.com/video/a-drone-footage-of-people-riding-a-horses-on-the-beach-14915401/",
+    creator: "Jessi X",
+    seconds: 8,
+    fit: "contain",
+  },
+  craftsmanship: {
+    src: "https://videos.pexels.com/video-files/6262806/6262806-uhd_2560_1440_25fps.mp4",
+    source:
+      "https://www.pexels.com/video/close-up-shot-of-a-person-making-jewelry-6262806/",
+    creator: "Tima Miroshnichenko",
     seconds: 12,
-    license: "CC0 (source links to Pexels Creative Commons page)",
+    fit: "contain",
   },
   golf: {
     src: "https://videos.pexels.com/video-files/6070745/6070745-uhd_2560_1440_24fps.mp4",
@@ -173,8 +181,8 @@ const EXPERIENCE_FILMS = {
     note: "Illustrative diamond jewellery; individual stones and appointments are confirmed separately.",
   },
   piaget: {
-    clips: [EXPERIENCE_FOOTAGE.ring],
-    note: "Generic jewellery inspiration; not a Piaget product, atelier or brand endorsement.",
+    clips: [EXPERIENCE_FOOTAGE.craftsmanship],
+    note: "Independent jewellery craftsmanship; not a Piaget product, atelier or brand endorsement.",
   },
   island: {
     clips: [EXPERIENCE_FOOTAGE.coast],

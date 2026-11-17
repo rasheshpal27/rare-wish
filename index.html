@@ -38,6 +38,8 @@
     <script src="assets/js/experience-films.js" defer></script>
     <script src="assets/js/music.js" defer></script>
     <script src="assets/js/content.js" defer></script>
+    <script src="assets/js/film-frames.js" defer></script>
+    <script src="assets/js/film-thumbnails.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <script type="application/ld+json">
       {
@@ -110,9 +112,15 @@
         <a href="#experiences">The experiences</a><a href="#worlds">Our world</a
         ><a href="#process">The rare way</a>
       </nav>
-      <button class="wish-button" data-enquire>
-        Make a wish <span>↗</span>
-      </button>
+      <a
+        class="wish-button whatsapp-primary"
+        href="https://wa.me/919769825919"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Let’s talk on WhatsApp (opens a new tab)"
+      >
+        WhatsApp <span>↗</span>
+      </a>
       <button
         class="menu-button"
         id="menu-button"
@@ -144,26 +152,7 @@
                   muted
                   playsinline
                   preload="none"
-                  poster="assets/img/hero.webp"
-                  aria-label="Maldives destination trailer"
-                ></video>
-              </div>
-              <div class="place-scene" data-scene="1">
-                <video
-                  muted
-                  playsinline
-                  preload="none"
-                  poster="assets/img/wild.webp"
-                  aria-label="Kenya destination trailer"
-                ></video>
-              </div>
-              <div class="place-scene" data-scene="2">
-                <video
-                  muted
-                  playsinline
-                  preload="none"
-                  poster="assets/img/antarctica.webp"
-                  aria-label="Antarctica destination trailer"
+                  aria-label="Explore Antarctica video preview"
                 ></video>
               </div>
             </div>
@@ -196,11 +185,11 @@
             >
             <div class="location-display">
               <span id="scene-number">01</span>
-              <h2 id="scene-name">The Maldives</h2>
+              <h2 id="scene-name">Explore Antarctica</h2>
             </div>
             <div class="location-meta">
               <span id="scene-region">THE INDIAN OCEAN</span
-              ><span id="scene-coordinates">04°17′ N · 73°25′ E</span>
+              ><span id="scene-coordinates">DISCOVER · 01 / 22</span>
             </div>
           </div>
           <div
@@ -209,7 +198,7 @@
             aria-live="polite"
           >
             <span>YOUR NEXT CHAPTER</span
-            ><span id="window-glass-destination">Maldives</span
+            ><span id="window-glass-destination">Antarctica</span
             ><small>Somewhere beyond ordinary.</small>
           </div>
           <div class="cabin-action">
@@ -217,7 +206,7 @@
               <span class="dive-symbol">↗</span
               ><span
                 >Take a Dive
-                <small id="dive-place">TO THE MALDIVES</small></span
+                <small id="dive-place">EXPLORE ANTARCTICA</small></span
               ><span class="dive-arrow">→</span></button
             ><span class="dive-description"
               >Through your window. Into somewhere extraordinary.</span
@@ -239,23 +228,34 @@
             </div>
             <div class="cabin-stops">
               <button
-                class="active"
-                data-stop="0"
-                aria-current="step"
-                aria-pressed="true"
+                id="journey-prev"
+                aria-label="Previous experience"
+                disabled
               >
-                <span>01</span> Maldives</button
-              ><button data-stop="1" aria-pressed="false">
-                <span>02</span> Kenya</button
-              ><button data-stop="2" aria-pressed="false">
-                <span>03</span> Antarctica
+                ←
               </button>
+              <label class="journey-picker">
+                <span id="journey-count">01 / 22 EXPERIENCES</span>
+                <select
+                  id="journey-select"
+                  aria-label="Choose a window experience"
+                >
+                  <option value="0">Explore Antarctica</option>
+                </select>
+              </label>
+              <button id="journey-next" aria-label="Next experience">→</button>
             </div>
             <div class="cabin-scroll-hint">
               <span class="scroll-mouse"></span> SCROLL TO CHANGE THE VIEW
               <span>↓</span>
             </div>
           </div>
+          <p
+            id="scene-load-status"
+            class="scene-load-status"
+            role="status"
+            aria-live="polite"
+          ></p>
           <button
             class="cabin-motion-control"
             id="motion-toggle"
@@ -263,6 +263,9 @@
             aria-pressed="false"
           >
             Pause video Ⅱ
+          </button>
+          <button class="cabin-film-notes" id="cabin-film-notes">
+            Illustrative film · View notes ↗
           </button>
           <a class="cabin-skip" href="#experiences"
             >Explore all experiences ↗</a
@@ -618,11 +621,22 @@
           <span class="eyebrow">GO BEYOND THE POSTCARD</span>
           <h2 id="place-heading"></h2>
           <p id="place-description"></p>
+          <p id="arrival-film-note" class="film-note"></p>
           <button class="button button-dark" id="place-enquire" data-enquire>
             Make this my wish ↗
           </button>
         </div>
-        <img id="place-image" alt="" loading="lazy" />
+        <div id="place-preview">
+          <video
+            class="film-thumbnail"
+            data-film-thumbnail=""
+            muted
+            playsinline
+            preload="none"
+            aria-label="Opening frame of this experience film"
+          ></video
+          ><span class="film-thumbnail-label">Film preview</span>
+        </div>
       </section>
       <section class="place-possibilities section-pad">
         <span class="eyebrow">YOUR DAYS, BEAUTIFULLY DIFFERENT</span>
@@ -652,6 +666,7 @@
         >
         <div class="footer-links">
           <a
+            class="button whatsapp-primary footer-whatsapp"
             href="https://wa.me/919769825919"
             target="_blank"
             rel="noopener noreferrer"
@@ -721,7 +736,6 @@
         class="experience-film"
         aria-label="Experience video preview"
       >
-        <img id="detail-image" src="assets/img/hero.webp" alt="" />
         <video
           id="detail-video"
           muted
