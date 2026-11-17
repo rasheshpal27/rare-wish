@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="stylesheet" href="assets/css/cabin.css" />
     <script src="assets/js/loader.js"></script>
+    <script src="assets/js/film-frames.js" defer></script>
     <script src="assets/js/window-seat.js" defer></script>
     <script src="assets/js/trailers.js" defer></script>
     <script src="assets/js/experience-films.js" defer></script>
@@ -249,6 +250,12 @@
               <span>↓</span>
             </div>
           </div>
+          <p
+            id="scene-load-status"
+            class="scene-load-status"
+            role="status"
+            aria-live="polite"
+          ></p>
           <button
             class="cabin-motion-control"
             id="motion-toggle"
@@ -341,42 +348,12 @@
         <div
           class="experience-grid"
           id="experience-grid"
+          aria-label="Scroll here to browse experiences"
           aria-live="polite"
         ></div>
         <div class="collection-bottom">
           <span><i></i> EXPERIENCES AS INDIVIDUAL AS YOU ARE</span
           ><span id="collection-count">01 — 03 / 22</span>
-        </div>
-      </section>
-      <section class="wild-story" id="wild-story" data-chapter="Into the wild">
-        <img
-          class="wild-image"
-          src="assets/img/wild.webp"
-          loading="lazy"
-          alt="A herd of wildebeest crossing the wild plains of East Africa"
-          width="2000"
-          height="1000"
-        />
-        <div class="wild-shade"></div>
-        <div class="story-top">
-          <span class="eyebrow light">OFF THE MAP. INTO THE MOMENT.</span
-          ><span>01°24′ S &nbsp; 35°00′ E</span>
-        </div>
-        <div class="wild-copy reveal">
-          <span class="eyebrow light">THE MAASAI MARA, KENYA</span>
-          <h2>Some moments<br />can’t be <em>put into words.</em></h2>
-          <p>
-            Sunrise on the savannah. A close encounter. The wild, just as it was
-            meant to be.<br />Leave the familiar behind. We’ll take care of the
-            rest.
-          </p>
-          <button class="button button-cream" data-experience="kenya">
-            Explore wild Kenya <span>↗</span>
-          </button>
-        </div>
-        <div class="story-footer">
-          <span>THE WORLD IS STILL FULL OF WONDER.</span
-          ><span>LET’S GO FIND YOURS. ↗</span>
         </div>
       </section>
       <section

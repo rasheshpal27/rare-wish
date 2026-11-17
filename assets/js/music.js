@@ -1,4 +1,4 @@
-/* A light, original major-key travel motif. Soft plucks, no bass drones. No audio requests or tracking.
+/* A quiet, original generative ambient score. No audio requests or tracking.
    AudioContext is created/resumed only by an explicit music opt-in gesture. */
 (() => {
   let context,
@@ -8,12 +8,7 @@
     failed = false,
     phrase = 0,
     revision = 0;
-  // G4–G5, C-major pentatonic: airy and consonant, with space between phrases.
-  const melodies = [
-    [392, 523.25, 659.25, 783.99, 659.25, 523.25, 440, 523.25],
-    [523.25, 587.33, 659.25, 523.25, 783.99, 659.25, 587.33, 523.25],
-    [440, 523.25, 659.25, 587.33, 523.25, 440, 392, 523.25],
-  ];
+  const notes = [146.83, 174.61, 220, 261.63, 293.66, 349.23, 440];
   const active = new Set();
   function paint() {
     document.querySelectorAll("[data-music-toggle]").forEach((button) => {
@@ -36,15 +31,15 @@
   function schedule() {
     if (!enabled || document.hidden || context?.state !== "running") return;
     const now = context.currentTime;
-    melodies[phrase].forEach((frequency, index) => {
+    [0, 2, 4].forEach((step, index) => {
       const oscillator = context.createOscillator();
       const envelope = context.createGain();
       oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
-      const start = now + index * 0.65;
+      oscillator.frequency.value = notes[(phrase + step) % notes.length];
+      const start = now + index * 0.6;
       envelope.gain.setValueAtTime(0, start);
-      envelope.gain.linearRampToValueAtTime(0.12, start + 0.035);
-      envelope.gain.exponentialRampToValueAtTime(0.001, start + 1.8);
+      envelope.gain.linearRampToValueAtTime(0.13, start + 2);
+      envelope.gain.exponentialRampToValueAtTime(0.001, start + 7.5);
       oscillator.connect(envelope).connect(master);
       active.add(oscillator);
       oscillator.onended = () => {
@@ -53,9 +48,9 @@
         envelope.disconnect();
       };
       oscillator.start(start);
-      oscillator.stop(start + 1.9);
+      oscillator.stop(start + 8);
     });
-    phrase = (phrase + 1) % melodies.length;
+    phrase = (phrase + 1) % notes.length;
   }
   function stopNotes() {
     clearInterval(timer);
@@ -96,7 +91,7 @@
         const Audio = window.AudioContext || window.webkitAudioContext;
         context = new Audio();
         master = context.createGain();
-        master.gain.value = 0.16;
+        master.gain.value = 0.18;
         master.connect(context.destination);
       } catch {
         enabled = false;

@@ -1223,3 +1223,61 @@ html.js-loading .site-loader {
     gap: 8px;
   }
 }
+
+/* Keep an opaque outgoing layer below the incoming dissolve: fading both
+   simultaneously exposes the dark glass at the midpoint. */
+.cabin-outside .place-scene.active {
+  z-index: 2;
+}
+.cabin-outside .place-scene.scene-underlay {
+  opacity: 1;
+  z-index: 1;
+  transition: none;
+}
+.trailer-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.trailer-layer.trailer-front.is-ready {
+  opacity: 1;
+  z-index: 2;
+}
+.trailer-layer.trailer-underlay.is-ready {
+  opacity: 1;
+  z-index: 1;
+  transition: none;
+}
+.trailer-layer .trailer-shot {
+  opacity: 1;
+  transition: none;
+}
+.trailer-layer .window-source,
+.cabin-view .window-source {
+  opacity: 0;
+}
+.window-composite {
+  position: absolute;
+  pointer-events: none;
+}
+.scene-load-status {
+  position: absolute;
+  left: 6%;
+  bottom: 100px;
+  max-width: 280px;
+  color: #e4e2cd;
+  font-size: 11px;
+  z-index: 6;
+}
+.scene-load-status:empty {
+  display: none;
+}
+#experiences {
+  overscroll-behavior: contain;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trailer-layer {
+    transition: none;
+  }
+}
