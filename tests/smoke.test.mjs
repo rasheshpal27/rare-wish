@@ -24,36 +24,9 @@ const base = process.env.TEST_BASE_URL || "http://127.0.0.1:8080";
 const fixture = await readFile(
   new URL("./fixtures/playback.mp4", import.meta.url),
 );
-async function fulfillMedia(route, body) {
-  const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range || "");
-  if (!range)
-    return route.fulfill({
-      status: 200,
-      contentType: "video/mp4",
-      headers: {
-        "accept-ranges": "bytes",
-        "content-length": String(body.length),
-      },
-      body,
-    });
-  const start = Number(range[1]),
-    end = range[2]
-      ? Math.min(Number(range[2]), body.length - 1)
-      : body.length - 1;
-  return route.fulfill({
-    status: 206,
-    contentType: "video/mp4",
-    headers: {
-      "accept-ranges": "bytes",
-      "content-range": `bytes ${start}-${end}/${body.length}`,
-      "content-length": String(end - start + 1),
-    },
-    body: body.subarray(start, end + 1),
-  });
-}
 async function stubFootage(page) {
   await page.route("https://videos.pexels.com/**", (route) =>
-    fulfillMedia(route, fixture),
+    route.fulfill({ status: 200, contentType: "video/mp4", body: fixture }),
   );
 }
 async function enter(page, url) {
@@ -255,7 +228,7 @@ test(
         () => homeTrailers[0].clip === 1 && !homeTrailers[0].switching,
       );
       assert.equal(
-        await page.locator('[data-scene="0"] video.trailer-front').count(),
+        await page.locator('[data-scene="0"] .trailer-front').count(),
         1,
       );
       await page.locator("#motion-toggle").click();
@@ -399,14 +372,10 @@ test(
       await settled(broken);
       assert.equal(
         await broken.locator("#scene-name").textContent(),
-        "Explore Antarctica",
-      );
-      assert.match(
-        await broken.locator("#scene-load-status").textContent(),
-        /Keeping your current view/,
+        "Kenya Wildlife Safari",
       );
       await stubFootage(broken);
-      await broken.locator("#journey-select").selectOption("1");
+      await broken.locator("#motion-toggle").click();
       await broken.waitForFunction(
         () =>
           !homeTrailers[1].current.paused &&
@@ -558,32 +527,41 @@ test(
           "no video stretch",
         );
         assert.ok(
-          frame.left >= frame.window.x - frame.window.width / 2 &&
-            frame.left + frame.width <= frame.window.x + frame.window.width / 2,
+          frame.left <= frame.window.bounds.left &&
+            frame.left + frame.width >= frame.window.bounds.right,
         );
         assert.ok(
-          frame.top >= frame.window.y - frame.window.height / 2 &&
-            frame.top + frame.height <=
-              frame.window.y + frame.window.height / 2,
+          frame.top <= frame.window.bounds.top &&
+            frame.top + frame.height >= frame.window.bounds.bottom,
         );
         assert.match(frame.mask, /cabin-window-mask.png/);
         assert.equal(frame.maskPosition, frame.photoPosition);
       }
+      await page.evaluate(() =>
+        homeTrailers[0].assign(homeTrailers[0].current, {
+          ...TRAILERS.antarctica.clips[0],
+          windowFocus: { x: 0.35, y: 0.45 },
+        }),
+      );
       assert.equal(
         await page.evaluate(() => {
-          const stage = document.querySelector("#cabin-view"),
-            g = CabinViewport.geometry(stage);
-          return [16 / 9, 9 / 16, 4 / 3].every((aspect) => {
-            const rect = CabinViewport.subjectRect(stage, aspect);
-            return (
-              Math.abs(rect.width / rect.height - aspect) < 0.001 &&
-              rect.width <= g.width &&
-              rect.height <= g.height * 0.66
-            );
-          });
+          const video = homeTrailers[0].current,
+            window = cabinWindowGeometry();
+          return (
+            Math.abs(
+              parseFloat(video.style.left) +
+                parseFloat(video.style.width) * 0.35 -
+                window.x,
+            ) < 0.1 &&
+            Math.abs(
+              parseFloat(video.style.top) +
+                parseFloat(video.style.height) * 0.45 -
+                window.y,
+            ) < 0.1
+          );
         }),
         true,
-        "landscape and portrait sources fit wholly inside the main glass",
+        "shot-specific focus supported",
       );
 
       // Remove the cabin photo in this diagnostic only. The media layer must
@@ -689,7 +667,7 @@ test(
 
 test(
   "welcome choices, opt-in music and on-demand films for all 22 experiences",
-  { timeout: 180000 },
+  { timeout: 120000 },
   async () => {
     const browser = await chromium.launch({
       executablePath,
@@ -1118,7 +1096,7 @@ test(
 );
 
 test(
-  "non-black film previews, distinct films, mobile crop, restored music and WhatsApp focus",
+  "real opening-frame previews, distinct films, mobile crop, lighter music and WhatsApp focus",
   { timeout: 90000 },
   async () => {
     const browser = await chromium.launch({
@@ -1171,10 +1149,10 @@ test(
         shadow: "none",
       });
       const frequencies = await page.evaluate(() => testFrequencies);
-      assert.ok(frequencies.length >= 3);
+      assert.ok(frequencies.length >= 8);
       assert.ok(
-        frequencies.every((f) => f >= 146 && f <= 441),
-        "the original sustained ambient register is restored",
+        frequencies.every((f) => f >= 392 && f <= 784),
+        "no low drone notes",
       );
       assert.notEqual(
         await page.evaluate(() => EXPERIENCE_FILMS.diamond.clips[0].src),
@@ -1282,246 +1260,6 @@ test(
       await silent.waitForTimeout(300);
       assert.equal(requests.length, 0);
       assert.equal(await silent.locator("video[poster]").count(), 0);
-    } finally {
-      await browser.close();
-    }
-  },
-);
-
-test(
-  "black-frame rejection, slow-load blending, all-window safe fit and hover wheel navigation",
-  { timeout: 120000 },
-  async () => {
-    const browser = await chromium.launch({
-      executablePath,
-      args: Chromium.args.filter((arg) => arg !== "--single-process"),
-      env,
-      headless: true,
-    });
-    try {
-      const page = await browser.newPage({
-        viewport: { width: 1440, height: 900 },
-      });
-      const errors = [];
-      page.on("pageerror", (error) => errors.push(error.message));
-      const blackOpening = await readFile(
-        new URL("./fixtures/black-opening.mp4", import.meta.url),
-      );
-      const blackOnly = await readFile(
-        new URL("./fixtures/black-only.mp4", import.meta.url),
-      );
-      await page.route("https://videos.pexels.com/**", (route) =>
-        fulfillMedia(route, blackOpening),
-      );
-      await enter(page, base);
-      await page.waitForFunction(() => homeTrailers[0].state === "playing");
-      assert.ok(
-        await page.evaluate(
-          () => Number(homeTrailers[0].current.dataset.previewTime) >= 1,
-        ),
-        "skip the genuinely black opening second",
-      );
-      assert.equal(
-        await page.evaluate(() => FilmFrames.inspect(homeTrailers[0].current)),
-        true,
-      );
-      assert.equal(await page.locator("#wild-story").count(), 0);
-      assert.equal(
-        await page.evaluate(() =>
-          cabinExperiences.some((p) => p.slug === "kenya"),
-        ),
-        true,
-      );
-
-      const nextURL = await page.evaluate(() => homeTrailers[1].clips[0].src);
-      let release;
-      const gate = new Promise((resolve) => {
-        release = resolve;
-      });
-      await page.route(nextURL, async (route) => {
-        await gate;
-        await fulfillMedia(route, blackOpening);
-      });
-      await page.locator("#journey-select").selectOption("1");
-      await page.waitForTimeout(2600); // Longer than the removed 2.2-second readiness race.
-      assert.equal(await page.evaluate(() => scene), 0);
-      assert.equal(
-        await page
-          .locator('[data-scene="0"]')
-          .evaluate((el) => getComputedStyle(el).opacity),
-        "1",
-      );
-      assert.ok(
-        await page.evaluate(
-          () => homeTrailers[0].current._windowCanvas.width > 0,
-        ),
-      );
-      release();
-      await page.waitForFunction(() => scene === 1 && sceneBusy);
-      assert.equal(
-        await page
-          .locator('[data-scene="0"]')
-          .evaluate((el) => getComputedStyle(el).opacity),
-        "1",
-        "opaque old frame beneath the incoming fade",
-      );
-      assert.equal(
-        await page.evaluate(() => homeTrailers[1].current.dataset.frameReady),
-        "true",
-      );
-      await settled(page);
-      await page.evaluate(() => homeTrailers[1].next());
-      await page.waitForFunction(() => !homeTrailers[1].switching);
-      assert.ok(
-        await page.evaluate(() => homeTrailers[1].current.currentTime >= 1),
-        "internal shot dissolve never seeks back to black time zero",
-      );
-
-      // This is synthetic geometry verification, NOT a visual audit of the CDN films.
-      for (const [width, height] of [
-        [1440, 900],
-        [390, 844],
-      ]) {
-        await page.setViewportSize({ width, height });
-        for (let index = 0; index < 22; index++) {
-          await page.evaluate(async (index) => {
-            await selectScene(index, false);
-            homeTrailers[index].setEnabled(false);
-            CabinViewport.paint(homeTrailers[index].current);
-          }, index);
-          const result = await page.evaluate((index) => {
-            const v = homeTrailers[index].current,
-              c = v._windowCanvas;
-            const stage = document.querySelector("#cabin-view"),
-              g = CabinViewport.geometry(stage);
-            const safe = CabinViewport.subjectRect(
-              stage,
-              v.videoWidth / v.videoHeight,
-            );
-            const ratio = c.width / (g.bounds.right - g.bounds.left);
-            const sample = (fraction) => [
-              ...c
-                .getContext("2d")
-                .getImageData(
-                  Math.round(
-                    (safe.left + safe.width * fraction - g.bounds.left) * ratio,
-                  ),
-                  Math.round(
-                    (safe.top + safe.height * 0.5 - g.bounds.top) * ratio,
-                  ),
-                  1,
-                  1,
-                ).data,
-            ];
-            return {
-              left: sample(0.09),
-              right: sample(0.91),
-              ready: v.dataset.frameReady,
-              inside:
-                safe.left >= g.bounds.left &&
-                safe.left + safe.width <= g.bounds.right,
-            };
-          }, index);
-          assert.equal(result.ready, "true");
-          assert.equal(result.inside, true);
-          assert.ok(
-            result.left[0] > 180 && result.left[2] < 60,
-            `left-edge subject visible for ${index} at ${width}`,
-          );
-          assert.ok(
-            result.right[2] > 180 && result.right[0] < 60,
-            `right-edge subject visible for ${index} at ${width}`,
-          );
-        }
-      }
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.evaluate(() => {
-        location.hash = "experiences";
-      });
-      await page.locator("#experience-grid").scrollIntoViewIfNeeded();
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll("#experience-grid video")].every(
-          (v) => v.dataset.ready === "true",
-        ),
-      );
-      assert.equal(
-        await page.evaluate(() =>
-          [...document.querySelectorAll("#experience-grid video")].every(
-            (v) => v.paused && v.currentTime >= 1 && FilmFrames.inspect(v),
-          ),
-        ),
-        true,
-      );
-      await page.waitForTimeout(700);
-      const box = await page.locator("#experience-grid").boundingBox();
-      await page.mouse.move(
-        box.x + box.width / 2,
-        Math.max(120, Math.min(700, box.y + box.height / 2)),
-      );
-      const oldY = await page.evaluate(() => scrollY);
-      await page.mouse.wheel(0, 120);
-      await page.waitForTimeout(70);
-      assert.equal(await page.evaluate(() => cardOffset), 3);
-      assert.equal(
-        await page.evaluate(() => scrollY),
-        oldY,
-        "hover wheel pages the collection, not the document",
-      );
-      await page.waitForTimeout(220);
-      // Dispatch a continuous momentum burst together, avoiding automation/IPC
-      // delays that can legitimately exceed the gesture's idle boundary.
-      const burst = await page.evaluate(() => {
-        const target = document.querySelector("#experience-grid");
-        const events = Array.from(
-          { length: 3 },
-          () =>
-            new WheelEvent("wheel", {
-              bubbles: true,
-              cancelable: true,
-              deltaY: -120,
-            }),
-        );
-        events.forEach((event) => target.dispatchEvent(event));
-        return {
-          offset: cardOffset,
-          captured: events.every((event) => event.defaultPrevented),
-        };
-      });
-      assert.deepEqual(
-        burst,
-        { offset: 0, captured: true },
-        "trackpad momentum remains one gesture",
-      );
-      await page.waitForTimeout(220);
-      await page.mouse.move(20, 20); // Header/outside collection: normal page wheel.
-      await page.mouse.wheel(0, 220);
-      await page.waitForTimeout(450);
-      assert.ok(
-        await page.evaluate((y) => scrollY > y, oldY),
-        "wheel outside collection scrolls the page",
-      );
-      assert.equal(await page.evaluate(() => cardOffset), 0);
-
-      // An entirely black film stays a neutral labelled placeholder, never a black thumbnail.
-      await page.route("**/test-black-only.mp4", (route) =>
-        fulfillMedia(route, blackOnly),
-      );
-      const failedPreview = await page.evaluate(async () => {
-        const video = document.createElement("video");
-        video.muted = true;
-        video.src = "/test-black-only.mp4";
-        document.body.append(video);
-        video.load();
-        const ready = await FilmFrames.prepare(video);
-        const result = { ready, exposed: video.dataset.frameReady === "true" };
-        FilmFrames.reset(video);
-        video.removeAttribute("src");
-        video.load();
-        video.remove();
-        return result;
-      });
-      assert.deepEqual(failedPreview, { ready: false, exposed: false });
-      assert.deepEqual(errors, []);
     } finally {
       await browser.close();
     }

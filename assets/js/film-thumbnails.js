@@ -1,4 +1,4 @@
-/* Thumbnails are paused decoded non-black frames, never unrelated photographs.
+/* Thumbnails are paused decoded opening frames, never unrelated photographs.
    Only visible cards request media, and only after video opt-in/default entry. */
 class FilmThumbnails {
   constructor() {
@@ -24,9 +24,17 @@ class FilmThumbnails {
       video.muted = video.defaultMuted = true;
       video.playsInline = true;
       video.preload = "none";
-      video.crossOrigin = "anonymous";
       if (!this.initialized.has(video)) {
         this.initialized.add(video);
+        video.addEventListener("loadedmetadata", () => {
+          // A tiny seek asks Safari for the opening decoded frame too.
+          if (video.currentTime === 0) video.currentTime = 0.001;
+        });
+        const reveal = () => {
+          if (video.readyState >= 2) video.dataset.ready = "true";
+        };
+        video.addEventListener("loadeddata", reveal);
+        video.addEventListener("seeked", reveal);
         video.addEventListener("error", () => {
           video.dataset.ready = "false";
           const label = video.nextElementSibling;
@@ -46,7 +54,6 @@ class FilmThumbnails {
   }
   unload(video) {
     if (!video.hasAttribute("src")) return;
-    FilmFrames.reset(video);
     video.pause();
     video.removeAttribute("src");
     delete video.dataset.ready;
@@ -68,16 +75,9 @@ class FilmThumbnails {
         continue;
       }
       if (!video.hasAttribute("src")) {
-        video.preload = "auto";
+        video.preload = "metadata";
         video.src = video.dataset.filmThumbnail;
         video.load();
-        const src = video.getAttribute("src");
-        FilmFrames.prepare(video).then((ready) => {
-          if (video.getAttribute("src") !== src || !this.enabled) return;
-          video.dataset.ready = String(ready);
-          if (!ready && video.nextElementSibling)
-            video.nextElementSibling.textContent = "Film preview unavailable";
-        });
       }
     }
   }

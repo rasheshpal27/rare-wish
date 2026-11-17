@@ -14,7 +14,7 @@ function renderCards() {
   filmThumbnails.release($("#experience-grid"));
   const e = filteredExperiences(),
     t = e.slice(cardOffset, cardOffset + 3);
-  ($("#experience-grid").innerHTML = t
+  (($("#experience-grid").innerHTML = t
     .map(
       (i, n) =>
         `<button class="experience-card enter" data-experience="${i.id}" style="animation-delay:${n * 70}ms" aria-label="Discover ${i.title}"><div class="experience-image">${thumbnailMarkup(i.id)}<span class="card-number">${String(experiences.indexOf(i) + 1).padStart(2, "0")} / A RARE EXPERIENCE</span><span class="card-category">${i.category.toUpperCase()}</span><span class="card-arrow">↗</span></div><div class="card-info"><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.short}</p></div></button>`,
@@ -23,7 +23,7 @@ function renderCards() {
     ($("#collection-count").textContent =
       `${String(e.length ? cardOffset + 1 : 0).padStart(2, "0")} — ${String(Math.min(cardOffset + 3, e.length)).padStart(2, "0")} / ${String(e.length).padStart(2, "0")}`),
     ($("#cards-prev").disabled = cardOffset === 0),
-    ($("#cards-next").disabled = cardOffset + 3 >= e.length);
+    ($("#cards-next").disabled = cardOffset + 3 >= e.length));
   if (!e.length)
     $("#experience-grid").innerHTML =
       '<div class="no-results"><h3>A wish beyond the list?</h3><p>Choose another category, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>';
@@ -31,72 +31,36 @@ function renderCards() {
 }
 $$("[data-filter]").forEach((e) =>
   e.addEventListener("click", () => {
-    (activeCategory = e.dataset.filter),
+    ((activeCategory = e.dataset.filter),
       (cardOffset = 0),
       $$("[data-filter]").forEach((t) => {
-        t.classList.toggle("active", t === e),
-          t.setAttribute("aria-pressed", String(t === e));
+        (t.classList.toggle("active", t === e),
+          t.setAttribute("aria-pressed", String(t === e)));
       }),
-      renderCards();
+      renderCards());
   }),
 );
 $("#cards-prev").addEventListener("click", () => {
-  (cardOffset = Math.max(0, cardOffset - 3)), renderCards();
+  ((cardOffset = Math.max(0, cardOffset - 3)), renderCards());
 });
 $("#cards-next").addEventListener("click", () => {
-  (cardOffset += 3), renderCards();
+  ((cardOffset += 3), renderCards());
 });
-// A wheel gesture belongs to the collection only while the pointer is over it.
-// Keep the arrows for keyboard/touch users; do not trap page scroll elsewhere.
-let cardWheelGesture = false,
-  cardWheelTimer;
-$("#experiences").addEventListener(
-  "wheel",
-  (event) => {
-    if (event.ctrlKey || $("dialog[open]")) return;
-    const delta =
-      Math.abs(event.deltaX) > Math.abs(event.deltaY)
-        ? event.deltaX
-        : event.deltaY;
-    if (!delta) return;
-    event.preventDefault();
-    clearTimeout(cardWheelTimer);
-    if (!cardWheelGesture) {
-      cardWheelGesture = true;
-      const lastPage = Math.max(
-        0,
-        Math.floor((filteredExperiences().length - 1) / 3) * 3,
-      );
-      const next = Math.max(
-        0,
-        Math.min(lastPage, cardOffset + Math.sign(delta) * 3),
-      );
-      if (next !== cardOffset) {
-        cardOffset = next;
-        renderCards();
-      }
-    }
-    cardWheelTimer = setTimeout(() => {
-      cardWheelGesture = false;
-    }, 180);
-  },
-  { passive: false },
-);
 renderCards();
 let dialogTrigger = null;
 function openDialog(e) {
   if ($("#experience-dialog").open) releaseExperienceFilm();
-  $("dialog[open]") || (dialogTrigger = document.activeElement),
+  ($("dialog[open]") || (dialogTrigger = document.activeElement),
     $$("dialog[open]").forEach((t) => t.close()),
     e.showModal(),
     (e.scrollTop = 0),
-    document.body.classList.add("modal-open");
+    document.body.classList.add("modal-open"));
 }
 function closeDialog(e) {
   e.close();
 }
 $$("dialog").forEach((e) => {
-  $(".close-dialog", e)?.addEventListener("click", () => closeDialog(e)),
+  ($(".close-dialog", e)?.addEventListener("click", () => closeDialog(e)),
     e.addEventListener("click", (t) => {
       if (t.target !== e) return;
       const i = e.getBoundingClientRect();
@@ -110,7 +74,7 @@ $$("dialog").forEach((e) => {
       $("dialog[open]") ||
         (document.body.classList.remove("modal-open"),
         dialogTrigger?.focus({ preventScroll: !0 }));
-    });
+    }));
 });
 let selectedExperience = null,
   experienceTrailer = null;
@@ -158,7 +122,7 @@ function renderCollection() {
           .toLowerCase()
           .includes(e),
     );
-  ($("#results-label").textContent =
+  (($("#results-label").textContent =
     `${t.length} ${t.length === 1 ? "experience" : "experiences"} to make your own · Imagery is illustrative; arrangements are confirmed individually.`),
     ($("#collection-results").innerHTML = t.length
       ? t
@@ -167,11 +131,11 @@ function renderCollection() {
               `<button class="result-card" data-experience="${i.id}"><div>${thumbnailMarkup(i.id)}<span class="result-arrow">↗</span></div><span class="card-location">${i.location.toUpperCase()}</span><h3>${i.title}</h3><p>${i.category}</p></button>`,
           )
           .join("")
-      : '<div class="no-results"><h3>A wish beyond the list?</h3><p>Try another search, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>');
+      : '<div class="no-results"><h3>A wish beyond the list?</h3><p>Try another search, or tell us what you have in mind.</p><button class="text-link" data-enquire>Create my own journey ↗</button></div>'));
   filmThumbnails.observe($("#collection-results"));
 }
 function openCollection(e = "All") {
-  (collectionCategory = e),
+  ((collectionCategory = e),
     ($("#experience-search").value = ""),
     $$("[data-collection-filter]").forEach(
       (t) => (
@@ -186,7 +150,7 @@ function openCollection(e = "All") {
       ),
     ),
     renderCollection(),
-    openDialog($("#collection-dialog"));
+    openDialog($("#collection-dialog")));
 }
 $("#view-all").addEventListener("click", () => openCollection());
 $("#explore-collective").addEventListener("click", () =>
@@ -195,22 +159,22 @@ $("#explore-collective").addEventListener("click", () =>
 $("#experience-search").addEventListener("input", renderCollection);
 $$("[data-collection-filter]").forEach((e) =>
   e.addEventListener("click", () => {
-    (collectionCategory = e.dataset.collectionFilter),
+    ((collectionCategory = e.dataset.collectionFilter),
       $$("[data-collection-filter]").forEach(
         (t) => (
           t.classList.toggle("active", t === e),
           t.setAttribute("aria-pressed", String(t === e))
         ),
       ),
-      renderCollection();
+      renderCollection());
   }),
 );
 experiences.forEach((e) => {
   const t = document.createElement("option");
-  (t.textContent = e.title), $("#enquiry-experience").append(t);
+  ((t.textContent = e.title), $("#enquiry-experience").append(t));
 });
 function openEnquiry(e) {
-  ($("#enquiry-form").hidden = !1),
+  (($("#enquiry-form").hidden = !1),
     ($("#enquiry-success").hidden = !0),
     ($("#enquiry-experience").value = [
       ...$("#enquiry-experience").options,
@@ -218,7 +182,7 @@ function openEnquiry(e) {
       ? e
       : "A bespoke journey — surprise me"),
     $("#mobile-menu").hidden === !1 && closeMenu(),
-    openDialog($("#enquiry-dialog"));
+    openDialog($("#enquiry-dialog")));
 }
 $("#detail-enquire").addEventListener("click", () =>
   openEnquiry(selectedExperience?.title || "A bespoke journey — surprise me"),
@@ -240,17 +204,17 @@ A little more: ${t.get("message").trim()}`
     }
 
 I’d love to start a conversation about a curated journey.`;
-  ($("#whatsapp-send").href =
+  (($("#whatsapp-send").href =
     `https://wa.me/919769825919?text=${encodeURIComponent(i)}`),
     ($("#enquiry-form").hidden = !0),
     ($("#enquiry-success").hidden = !1),
     $("#whatsapp-send").focus(),
-    $("#enquiry-dialog").scrollTo({ top: 0, behavior: "smooth" });
+    $("#enquiry-dialog").scrollTo({ top: 0, behavior: "smooth" }));
 });
 $("#edit-enquiry").addEventListener("click", () => {
-  ($("#enquiry-form").hidden = !1),
+  (($("#enquiry-form").hidden = !1),
     ($("#enquiry-success").hidden = !0),
-    $('[name="name"]').focus();
+    $('[name="name"]').focus());
 });
 $("#privacy-button").addEventListener("click", () =>
   openDialog($("#privacy-dialog")),
@@ -267,25 +231,25 @@ function updateHeader() {
     !location.hash.startsWith("#experience/") &&
     scrollY < 60 &&
     $("#mobile-menu").hidden;
-  $("#header").classList.toggle("overlay-header", e),
-    $("#header").classList.toggle("scrolled", !e);
+  ($("#header").classList.toggle("overlay-header", e),
+    $("#header").classList.toggle("scrolled", !e));
 }
 function closeMenu() {
-  ($("#mobile-menu").hidden = !0),
+  (($("#mobile-menu").hidden = !0),
     $("#menu-button").setAttribute("aria-expanded", "false"),
-    updateHeader();
+    updateHeader());
 }
 $("#menu-button").addEventListener("click", () => {
   const e = !$("#mobile-menu").hidden;
-  ($("#mobile-menu").hidden = e),
+  (($("#mobile-menu").hidden = e),
     $("#menu-button").setAttribute("aria-expanded", String(!e)),
-    updateHeader();
+    updateHeader());
 });
 $$("#mobile-menu a").forEach((e) => e.addEventListener("click", closeMenu));
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     const t = $("dialog[open]");
-    t && (e.preventDefault(), closeDialog(t)), closeMenu();
+    (t && (e.preventDefault(), closeDialog(t)), closeMenu());
   }
 });
 
@@ -402,11 +366,9 @@ function cancelSceneTransition() {
   sceneAnimations = [];
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
-  $$("#flight-portal [data-scene]").forEach((el, i) => {
-    el.classList.toggle("active", i === scene);
-    el.classList.remove("scene-underlay");
-  });
-  $("#scene-load-status").textContent = "";
+  $$("#flight-portal [data-scene]").forEach((el, i) =>
+    el.classList.toggle("active", i === scene),
+  );
   updateSceneText();
   setStop();
 }
@@ -416,7 +378,7 @@ async function selectScene(index, animate = true) {
     queuedScene = index;
     return;
   }
-  if (index === scene) {
+  if (index === scene || !animate || motionPreference.matches) {
     scene = index;
     cancelSceneTransition();
     syncMotion();
@@ -427,44 +389,22 @@ async function selectScene(index, animate = true) {
   const oldScene = scene;
   preparingScene = index;
   $("#take-dive").disabled = true;
-  // Never use a timeout as permission to expose an empty/black buffer.
-  $("#scene-load-status").textContent = paused
-    ? ""
-    : "Preparing the next experience…";
+  // Request a decoded incoming frame before crossfading. Bounded wait: a broken
+  // CDN must never lock navigation; the neutral window and retry control remain (never a mismatched photo).
   if (!paused) {
     syncMotion();
-    const ready = await homeTrailers[index].prepare();
-    if (version !== sceneVersion) return;
-    if (!ready) {
-      const next = queuedScene;
-      cancelSceneTransition();
-      $("#scene-load-status").textContent =
-        "Film unavailable. Keeping your current view — choose the experience again to retry.";
-      homeTrailers[index].unload();
-      syncMotion();
-      if (next !== null && next !== scene) selectScene(next);
-      return;
-    }
+    await Promise.race([homeTrailers[index].prepare(), delay(2200)]);
   }
-  $("#scene-load-status").textContent = "";
   if (version !== sceneVersion) return;
   scene = index;
   outgoingScene = oldScene;
   preparingScene = null;
   document.body.classList.add("scene-changing");
   setStop();
-  $$("#flight-portal [data-scene]").forEach((el, i) => {
-    el.classList.toggle("active", i === scene);
-    el.classList.toggle("scene-underlay", i === oldScene);
-  });
+  $$("#flight-portal [data-scene]").forEach((el, i) =>
+    el.classList.toggle("active", i === scene),
+  );
   syncMotion();
-  if (!animate || motionPreference.matches) {
-    const next = queuedScene;
-    cancelSceneTransition();
-    syncMotion();
-    if (next !== null && next !== scene) selectScene(next);
-    return;
-  }
   // Animate inner content, never the window label's positioning transform.
   const textNodes = $$(
     ".location-display, .location-meta, #window-glass-label > span:nth-child(2), #window-glass-label small, #dive-place",
@@ -497,7 +437,6 @@ async function selectScene(index, animate = true) {
   sceneAnimations = [];
   sceneBusy = false;
   outgoingScene = null;
-  $$(".scene-underlay").forEach((el) => el.classList.remove("scene-underlay"));
   document.body.classList.remove("scene-changing");
   $("#take-dive").disabled = false;
   syncMotion();
@@ -773,16 +712,13 @@ $("#take-dive").addEventListener("click", () => {
   $$("[id]", cabin).forEach((element) => element.removeAttribute("id"));
   $$(".place-scene:not(.active)", cabin).forEach((element) => element.remove());
   const sourceVideo = homeTrailers[scene].current;
-  $$("video, .window-composite, .trailer-layer", cabin).forEach((video) =>
-    video.remove(),
-  );
+  $$("video", cabin).forEach((video) => video.remove());
   const video = sourceVideo.cloneNode(true);
   video.removeAttribute("id");
   $(".place-scene.active", cabin).append(video);
   video.currentTime = sourceVideo.currentTime;
   video.muted = true;
   frame.replaceChildren(cabin);
-  CabinViewport.copy(sourceVideo, video);
   syncMotion();
   Object.assign(frame.style, {
     left: `${stage.left}px`,
